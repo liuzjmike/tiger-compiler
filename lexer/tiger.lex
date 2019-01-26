@@ -16,7 +16,7 @@ fun stringToInt s = valOf(Int.fromString s)
 
 fun newLine pos = (lineNum := !lineNum + 1; linePos := pos :: !linePos)
 
-fun translateControl s = str (chr (ord (String.sub (s, 1)) - 64))
+fun translateControl s = str (chr(ord(String.sub (s, 1))-64))
 
 fun eof() =
     let val pos = hd(!linePos) 
@@ -24,12 +24,14 @@ fun eof() =
         if !commentDepth > 0
         then ErrorMsg.error pos ("unclosed comment of depth" ^ Int.toString (!commentDepth))
         else ();
+        ErrorMsg.reset();
         Tokens.EOF(pos,pos)
     end
 
 %% 
 
-digits=[0-9]+;
+digit=[0-9];
+digits={digit}+;
 letter=[a-zA-Z];
 format=[ \t\f];
 %s COMMENT STRING ESCAPE FORMAT;
@@ -80,8 +82,10 @@ format=[ \t\f];
 <INITIAL>":="       => (Tokens.ASSIGN(yypos,yypos+2));
 
 <INITIAL>{digits}   => (Tokens.INT(stringToInt yytext, yypos, yypos + size yytext));
-<INITIAL>{letter}+[{letter}{digits}_]*
+<INITIAL>{letter}+({letter}|{digit}|_)*
                     => (Tokens.ID(yytext, yypos, yypos + size yytext));
+<INITIAL>[0-9_]+({letter}|{digit}|_)*
+                    => (ErrorMsg.error yypos ("illegal identifier " ^ yytext); continue());
 <INITIAL>" "|\t     => (continue());
 
 <INITIAL>"/*"       => (YYBEGIN COMMENT; updateCommentDepth 1; continue());
@@ -100,18 +104,15 @@ format=[ \t\f];
 
 <ESCAPE>n           => (appendCurrentString "\n"; YYBEGIN STRING; continue());
 <ESCAPE>t           => (appendCurrentString "\t"; YYBEGIN STRING; continue());
-<ESCAPE>\\\^[@A-Z\[\\\]\^_]
-                    => (appendCurrentString (translateControl yytext); continue());
+<ESCAPE>\^[@A-Z\[\\\]\^_]
+                    => (appendCurrentString (translateControl yytext); YYBEGIN STRING; continue());
+<ESCAPE>\^[^@A-Z\[\\\]\^_]
+                    => (err (yypos-1, yypos+2) ("illegal control character \\" ^ yytext); YYBEGIN STRING; continue());
 <ESCAPE>\ddd        => (appendCurrentString (str (chr (stringToInt yytext))); YYBEGIN STRING; continue());
 <ESCAPE>\"|\\       => (appendCurrentString yytext; YYBEGIN STRING; continue());
 <ESCAPE>\n          => (newLine yypos; YYBEGIN FORMAT; continue());
 <ESCAPE>{format}    => (YYBEGIN FORMAT; continue());
-<ESCAPE>.           => (err (yypos-1, yypos+1)
-                        ("illegal escape character \\" ^ yytext
-                         ^ (if yytext = "^"
-                            then " (may be illegal control character)"
-                            else ""));
-                        YYBEGIN STRING; continue());
+<ESCAPE>.           => (err (yypos-1, yypos+1) ("illegal escape character \\" ^ yytext); YYBEGIN STRING; continue());
 
 <FORMAT>\n          => (newLine yypos; continue());
 <FORMAT>{format}    => (continue());

@@ -8,6 +8,7 @@ fun err(p1,p2) = ErrorMsg.error p1
 val commentDepth = ref 0
 fun updateCommentDepth delta = commentDepth := !commentDepth + delta
 
+val inString = ref false
 val stringStart = ref 0
 val currentString = ref ""
 fun appendCurrentString s = (currentString := !currentString ^ s)
@@ -16,13 +17,20 @@ fun stringToInt s = valOf(Int.fromString s)
 
 fun newLine pos = (lineNum := !lineNum + 1; linePos := pos :: !linePos)
 
-fun translateControl s = str (chr(ord(String.sub (s, 1))-64))
+fun translateControl s = str (chr(ord(String.sub(s, 1))-64))
 
 fun eof() =
-    let val pos = hd(!linePos) 
-    in 
+    let val pos = hd(!linePos)
+    in
         if !commentDepth > 0
-        then ErrorMsg.error pos ("unclosed comment of depth" ^ Int.toString (!commentDepth))
+        then
+            (ErrorMsg.error pos ("unclosed comment of depth " ^ Int.toString (!commentDepth));
+             commentDepth := 0)
+        else ();
+        if !inString
+        then
+            (ErrorMsg.error pos "unclosed string";
+             inString := false)
         else ();
         ErrorMsg.reset();
         Tokens.EOF(pos,pos)
@@ -89,7 +97,7 @@ format=[ \t\f];
 <INITIAL>" "|\t     => (continue());
 
 <INITIAL>"/*"       => (YYBEGIN COMMENT; updateCommentDepth 1; continue());
-<INITIAL>\"         => (YYBEGIN STRING; currentString := ""; stringStart := yypos; continue());
+<INITIAL>\"         => (YYBEGIN STRING; inString := true; currentString := ""; stringStart := yypos; continue());
 <INITIAL>.          => (ErrorMsg.error yypos ("illegal character " ^ yytext); continue());
 
 <COMMENT>"/*"       => (updateCommentDepth 1; continue());
@@ -97,9 +105,10 @@ format=[ \t\f];
 <COMMENT>\n         => (newLine yypos; continue());
 <COMMENT>.          => (continue());
 
-<STRING>\"          => (YYBEGIN INITIAL; Tokens.STRING(!currentString, !stringStart, yypos+1));
+<STRING>\"          => (YYBEGIN INITIAL; inString := false; Tokens.STRING(!currentString, !stringStart, yypos+1));
 <STRING>\\          => (YYBEGIN ESCAPE; continue());
-<STRING>\n          => (ErrorMsg.error yypos ("unclosed string"); newLine yypos; YYBEGIN INITIAL; continue());
+<STRING>\n          => (ErrorMsg.error yypos "unclosed string"; newLine yypos; YYBEGIN INITIAL; inString := false;
+                        Tokens.STRING(!currentString, !stringStart, yypos+1));
 <STRING>.           => (appendCurrentString yytext; continue());
 
 <ESCAPE>n           => (appendCurrentString "\n"; YYBEGIN STRING; continue());
@@ -108,7 +117,7 @@ format=[ \t\f];
                     => (appendCurrentString (translateControl yytext); YYBEGIN STRING; continue());
 <ESCAPE>\^[^@A-Z\[\\\]\^_]
                     => (err (yypos-1, yypos+2) ("illegal control character \\" ^ yytext); YYBEGIN STRING; continue());
-<ESCAPE>\ddd        => (appendCurrentString (str (chr (stringToInt yytext))); YYBEGIN STRING; continue());
+<ESCAPE>{digit}{3}  => (appendCurrentString (str (chr (stringToInt yytext))); YYBEGIN STRING; continue());
 <ESCAPE>\"|\\       => (appendCurrentString yytext; YYBEGIN STRING; continue());
 <ESCAPE>\n          => (newLine yypos; YYBEGIN FORMAT; continue());
 <ESCAPE>{format}    => (YYBEGIN FORMAT; continue());
@@ -117,4 +126,5 @@ format=[ \t\f];
 <FORMAT>\n          => (newLine yypos; continue());
 <FORMAT>{format}    => (continue());
 <FORMAT>"\\"        => (YYBEGIN STRING; continue());
-<FORMAT>.           => (ErrorMsg.error yypos ("illegal format character " ^ yytext); continue());
+<FORMAT>.           => (ErrorMsg.error yypos ("illegal format character " ^ yytext); appendCurrentString yytext;
+                        YYBEGIN STRING; continue());

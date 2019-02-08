@@ -13,8 +13,8 @@
   | FUNCTION | VAR | TYPE 
 
 %nonterm
-    program | exp | lvalue | access | optseq | expseq | explist | fieldlist | field | decs | dec | tydec | vardec
-  | fundec
+    program | exp | lvalue | accseq | access | optseq | expseq | explist | fieldlist | field
+  | decs | dec | tydec | vardec | fundec
 
 %pos int
 %verbose
@@ -78,10 +78,14 @@ exp: lvalue                             ()
    | LET decs IN optseq END             ()
    | BREAK                              ()
 
-lvalue: ID access                       ()
+lvalue: ID                              ()
+      | ID accseq                       ()
 
-access: access DOT ID                   ()
-      | access LBRACK exp RBRACK        ()
+accseq: accseq access                   ()
+      | access                          ()
+
+access: DOT ID                          ()
+      | LBRACK exp RBRACK               ()
 
 optseq: expseq                          ()
       |                                 ()

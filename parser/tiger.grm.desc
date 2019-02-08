@@ -15,7 +15,7 @@ state 0:
 	BREAK	shift 4
 	NIL	shift 3
 
-	program	goto 98
+	program	goto 100
 	exp	goto 2
 	lvalue	goto 1
 
@@ -91,7 +91,7 @@ state 5:
 
 	decs	goto 27
 
-	.	reduce by rule 44
+	.	reduce by rule 47
 
 
 state 6:
@@ -192,7 +192,7 @@ state 10:
 	optseq	goto 33
 	expseq	goto 32
 
-	.	reduce by rule 35
+	.	reduce by rule 38
 
 
 state 11:
@@ -220,15 +220,18 @@ state 13:
 	exp : ID . LBRACE RBRACE 
 	exp : ID . LBRACE fieldlist RBRACE 
 	exp : ID . LBRACK exp RBRACK OF exp 
-	lvalue : ID . access 
+	lvalue : ID .  (reduce by rule 31)
+	lvalue : ID . accseq 
 
-	LPAREN	shift 38
-	LBRACK	shift 37
-	LBRACE	shift 36
+	LPAREN	shift 40
+	LBRACK	shift 39
+	LBRACE	shift 38
+	DOT	shift 37
 
+	accseq	goto 36
 	access	goto 35
 
-	.	error
+	.	reduce by rule 31
 
 
 state 14:
@@ -247,7 +250,7 @@ state 14:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 39
+	exp	goto 41
 	lvalue	goto 1
 
 	.	error
@@ -269,7 +272,7 @@ state 15:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 40
+	exp	goto 42
 	lvalue	goto 1
 
 	.	error
@@ -291,7 +294,7 @@ state 16:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 41
+	exp	goto 43
 	lvalue	goto 1
 
 	.	error
@@ -313,7 +316,7 @@ state 17:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 42
+	exp	goto 44
 	lvalue	goto 1
 
 	.	error
@@ -335,7 +338,7 @@ state 18:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 43
+	exp	goto 45
 	lvalue	goto 1
 
 	.	error
@@ -357,7 +360,7 @@ state 19:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 44
+	exp	goto 46
 	lvalue	goto 1
 
 	.	error
@@ -379,7 +382,7 @@ state 20:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 45
+	exp	goto 47
 	lvalue	goto 1
 
 	.	error
@@ -401,7 +404,7 @@ state 21:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 46
+	exp	goto 48
 	lvalue	goto 1
 
 	.	error
@@ -423,7 +426,7 @@ state 22:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 47
+	exp	goto 49
 	lvalue	goto 1
 
 	.	error
@@ -445,7 +448,7 @@ state 23:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 48
+	exp	goto 50
 	lvalue	goto 1
 
 	.	error
@@ -467,7 +470,7 @@ state 24:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 49
+	exp	goto 51
 	lvalue	goto 1
 
 	.	error
@@ -489,7 +492,7 @@ state 25:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 50
+	exp	goto 52
 	lvalue	goto 1
 
 	.	error
@@ -511,7 +514,7 @@ state 26:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 51
+	exp	goto 53
 	lvalue	goto 1
 
 	.	error
@@ -522,12 +525,12 @@ state 27:
 	exp : LET decs . IN optseq END 
 	decs : decs . dec 
 
-	IN	shift 56
+	IN	shift 58
 
-	dec	goto 55
-	tydec	goto 54
-	vardec	goto 53
-	fundec	goto 52
+	dec	goto 57
+	tydec	goto 56
+	vardec	goto 55
+	fundec	goto 54
 
 	.	error
 
@@ -536,7 +539,7 @@ state 28:
 
 	exp : FOR ID . ASSIGN exp TO exp DO exp 
 
-	ASSIGN	shift 57
+	ASSIGN	shift 59
 
 
 	.	error
@@ -570,7 +573,7 @@ state 29:
 	GE	shift 17
 	AND	shift 16
 	OR	shift 15
-	DO	shift 58
+	DO	shift 60
 
 
 	.	error
@@ -605,7 +608,7 @@ state 30:
 	GE	shift 17
 	AND	shift 16
 	OR	shift 15
-	THEN	shift 59
+	THEN	shift 61
 
 
 	.	error
@@ -634,20 +637,20 @@ state 31:
 
 state 32:
 
-	optseq : expseq .  (reduce by rule 34)
+	optseq : expseq .  (reduce by rule 37)
 	expseq : expseq . COLON exp 
 
-	COLON	shift 60
+	COLON	shift 62
 
 
-	.	reduce by rule 34
+	.	reduce by rule 37
 
 
 state 33:
 
 	exp : LPAREN optseq . RPAREN 
 
-	RPAREN	shift 61
+	RPAREN	shift 63
 
 
 	.	error
@@ -667,7 +670,7 @@ state 34:
 	exp : exp . GE exp 
 	exp : exp . AND exp 
 	exp : exp . OR exp 
-	expseq : exp .  (reduce by rule 37)
+	expseq : exp .  (reduce by rule 40)
 
 	PLUS	shift 26
 	MINUS	shift 25
@@ -683,39 +686,59 @@ state 34:
 	OR	shift 15
 
 
-	.	reduce by rule 37
+	.	reduce by rule 40
 
 
 state 35:
 
-	lvalue : ID access .  (reduce by rule 31)
-	access : access . DOT ID 
-	access : access . LBRACK exp RBRACK 
-
-	LBRACK	shift 63
-	DOT	shift 62
+	accseq : access .  (reduce by rule 34)
 
 
-	.	reduce by rule 31
+
+	.	reduce by rule 34
 
 
 state 36:
 
-	exp : ID LBRACE . RBRACE 
-	exp : ID LBRACE . fieldlist RBRACE 
+	lvalue : ID accseq .  (reduce by rule 32)
+	accseq : accseq . access 
 
-	ID	shift 67
-	RBRACE	shift 66
+	LBRACK	shift 65
+	DOT	shift 37
 
-	fieldlist	goto 65
-	field	goto 64
+	access	goto 64
 
-	.	error
+	.	reduce by rule 32
 
 
 state 37:
 
+	access : DOT . ID 
+
+	ID	shift 66
+
+
+	.	error
+
+
+state 38:
+
+	exp : ID LBRACE . RBRACE 
+	exp : ID LBRACE . fieldlist RBRACE 
+
+	ID	shift 70
+	RBRACE	shift 69
+
+	fieldlist	goto 68
+	field	goto 67
+
+	.	error
+
+
+state 39:
+
 	exp : ID LBRACK . exp RBRACK OF exp 
+	access : LBRACK . exp RBRACK 
 
 	ID	shift 13
 	INT	shift 12
@@ -729,13 +752,13 @@ state 37:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 68
+	exp	goto 71
 	lvalue	goto 1
 
 	.	error
 
 
-state 38:
+state 40:
 
 	exp : ID LPAREN . RPAREN 
 	exp : ID LPAREN . explist RPAREN 
@@ -744,7 +767,7 @@ state 38:
 	INT	shift 12
 	STRING	shift 11
 	LPAREN	shift 10
-	RPAREN	shift 71
+	RPAREN	shift 74
 	MINUS	shift 9
 	IF	shift 8
 	WHILE	shift 7
@@ -753,14 +776,14 @@ state 38:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 70
+	exp	goto 73
 	lvalue	goto 1
-	explist	goto 69
+	explist	goto 72
 
 	.	error
 
 
-state 39:
+state 41:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -793,7 +816,7 @@ state 39:
 	.	reduce by rule 24
 
 
-state 40:
+state 42:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -825,7 +848,7 @@ state 40:
 	.	reduce by rule 20
 
 
-state 41:
+state 43:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -856,7 +879,7 @@ state 41:
 	.	reduce by rule 19
 
 
-state 42:
+state 44:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -894,7 +917,7 @@ state 42:
 	.	error
 
 
-state 43:
+state 45:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -932,7 +955,7 @@ state 43:
 	.	error
 
 
-state 44:
+state 46:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -970,7 +993,7 @@ state 44:
 	.	error
 
 
-state 45:
+state 47:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1008,7 +1031,7 @@ state 45:
 	.	error
 
 
-state 46:
+state 48:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1046,7 +1069,7 @@ state 46:
 	.	error
 
 
-state 47:
+state 49:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1084,7 +1107,7 @@ state 47:
 	.	error
 
 
-state 48:
+state 50:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1105,7 +1128,7 @@ state 48:
 	.	reduce by rule 12
 
 
-state 49:
+state 51:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1126,7 +1149,7 @@ state 49:
 	.	reduce by rule 11
 
 
-state 50:
+state 52:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1149,7 +1172,7 @@ state 50:
 	.	reduce by rule 10
 
 
-state 51:
+state 53:
 
 	exp : exp . PLUS exp 
 	exp : exp PLUS exp .  (reduce by rule 9)
@@ -1172,43 +1195,43 @@ state 51:
 	.	reduce by rule 9
 
 
-state 52:
+state 54:
 
-	dec : fundec .  (reduce by rule 47)
-
-
-
-	.	reduce by rule 47
+	dec : fundec .  (reduce by rule 50)
 
 
-state 53:
 
-	dec : vardec .  (reduce by rule 46)
+	.	reduce by rule 50
+
+
+state 55:
+
+	dec : vardec .  (reduce by rule 49)
+
+
+
+	.	reduce by rule 49
+
+
+state 56:
+
+	dec : tydec .  (reduce by rule 48)
+
+
+
+	.	reduce by rule 48
+
+
+state 57:
+
+	decs : decs dec .  (reduce by rule 46)
 
 
 
 	.	reduce by rule 46
 
 
-state 54:
-
-	dec : tydec .  (reduce by rule 45)
-
-
-
-	.	reduce by rule 45
-
-
-state 55:
-
-	decs : decs dec .  (reduce by rule 43)
-
-
-
-	.	reduce by rule 43
-
-
-state 56:
+state 58:
 
 	exp : LET decs IN . optseq END 
 
@@ -1226,82 +1249,15 @@ state 56:
 
 	exp	goto 34
 	lvalue	goto 1
-	optseq	goto 72
+	optseq	goto 75
 	expseq	goto 32
 
-	.	reduce by rule 35
-
-
-state 57:
-
-	exp : FOR ID ASSIGN . exp TO exp DO exp 
-
-	ID	shift 13
-	INT	shift 12
-	STRING	shift 11
-	LPAREN	shift 10
-	MINUS	shift 9
-	IF	shift 8
-	WHILE	shift 7
-	FOR	shift 6
-	LET	shift 5
-	BREAK	shift 4
-	NIL	shift 3
-
-	exp	goto 73
-	lvalue	goto 1
-
-	.	error
-
-
-state 58:
-
-	exp : WHILE exp DO . exp 
-
-	ID	shift 13
-	INT	shift 12
-	STRING	shift 11
-	LPAREN	shift 10
-	MINUS	shift 9
-	IF	shift 8
-	WHILE	shift 7
-	FOR	shift 6
-	LET	shift 5
-	BREAK	shift 4
-	NIL	shift 3
-
-	exp	goto 74
-	lvalue	goto 1
-
-	.	error
+	.	reduce by rule 38
 
 
 state 59:
 
-	exp : IF exp THEN . exp ELSE exp 
-	exp : IF exp THEN . exp 
-
-	ID	shift 13
-	INT	shift 12
-	STRING	shift 11
-	LPAREN	shift 10
-	MINUS	shift 9
-	IF	shift 8
-	WHILE	shift 7
-	FOR	shift 6
-	LET	shift 5
-	BREAK	shift 4
-	NIL	shift 3
-
-	exp	goto 75
-	lvalue	goto 1
-
-	.	error
-
-
-state 60:
-
-	expseq : expseq COLON . exp 
+	exp : FOR ID ASSIGN . exp TO exp DO exp 
 
 	ID	shift 13
 	INT	shift 12
@@ -1321,28 +1277,32 @@ state 60:
 	.	error
 
 
-state 61:
+state 60:
 
-	exp : LPAREN optseq RPAREN .  (reduce by rule 3)
+	exp : WHILE exp DO . exp 
 
+	ID	shift 13
+	INT	shift 12
+	STRING	shift 11
+	LPAREN	shift 10
+	MINUS	shift 9
+	IF	shift 8
+	WHILE	shift 7
+	FOR	shift 6
+	LET	shift 5
+	BREAK	shift 4
+	NIL	shift 3
 
-
-	.	reduce by rule 3
-
-
-state 62:
-
-	access : access DOT . ID 
-
-	ID	shift 77
-
+	exp	goto 77
+	lvalue	goto 1
 
 	.	error
 
 
-state 63:
+state 61:
 
-	access : access LBRACK . exp RBRACK 
+	exp : IF exp THEN . exp ELSE exp 
+	exp : IF exp THEN . exp 
 
 	ID	shift 13
 	INT	shift 12
@@ -1362,28 +1322,99 @@ state 63:
 	.	error
 
 
+state 62:
+
+	expseq : expseq COLON . exp 
+
+	ID	shift 13
+	INT	shift 12
+	STRING	shift 11
+	LPAREN	shift 10
+	MINUS	shift 9
+	IF	shift 8
+	WHILE	shift 7
+	FOR	shift 6
+	LET	shift 5
+	BREAK	shift 4
+	NIL	shift 3
+
+	exp	goto 79
+	lvalue	goto 1
+
+	.	error
+
+
+state 63:
+
+	exp : LPAREN optseq RPAREN .  (reduce by rule 3)
+
+
+
+	.	reduce by rule 3
+
+
 state 64:
 
-	fieldlist : field .  (reduce by rule 41)
+	accseq : accseq access .  (reduce by rule 33)
 
 
 
-	.	reduce by rule 41
+	.	reduce by rule 33
 
 
 state 65:
 
-	exp : ID LBRACE fieldlist . RBRACE 
-	fieldlist : fieldlist . COMMA field 
+	access : LBRACK . exp RBRACK 
 
-	COMMA	shift 80
-	RBRACE	shift 79
+	ID	shift 13
+	INT	shift 12
+	STRING	shift 11
+	LPAREN	shift 10
+	MINUS	shift 9
+	IF	shift 8
+	WHILE	shift 7
+	FOR	shift 6
+	LET	shift 5
+	BREAK	shift 4
+	NIL	shift 3
 
+	exp	goto 80
+	lvalue	goto 1
 
 	.	error
 
 
 state 66:
+
+	access : DOT ID .  (reduce by rule 35)
+
+
+
+	.	reduce by rule 35
+
+
+state 67:
+
+	fieldlist : field .  (reduce by rule 44)
+
+
+
+	.	reduce by rule 44
+
+
+state 68:
+
+	exp : ID LBRACE fieldlist . RBRACE 
+	fieldlist : fieldlist . COMMA field 
+
+	COMMA	shift 82
+	RBRACE	shift 81
+
+
+	.	error
+
+
+state 69:
 
 	exp : ID LBRACE RBRACE .  (reduce by rule 21)
 
@@ -1392,17 +1423,17 @@ state 66:
 	.	reduce by rule 21
 
 
-state 67:
+state 70:
 
 	field : ID . EQ exp 
 
-	EQ	shift 81
+	EQ	shift 83
 
 
 	.	error
 
 
-state 68:
+state 71:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1417,8 +1448,9 @@ state 68:
 	exp : exp . AND exp 
 	exp : exp . OR exp 
 	exp : ID LBRACK exp . RBRACK OF exp 
+	access : LBRACK exp . RBRACK 
 
-	RBRACK	shift 82
+	RBRACK	shift 84
 	PLUS	shift 26
 	MINUS	shift 25
 	TIMES	shift 24
@@ -1436,19 +1468,19 @@ state 68:
 	.	error
 
 
-state 69:
+state 72:
 
 	exp : ID LPAREN explist . RPAREN 
 	explist : explist . COMMA exp 
 
-	COMMA	shift 84
-	RPAREN	shift 83
+	COMMA	shift 86
+	RPAREN	shift 85
 
 
 	.	error
 
 
-state 70:
+state 73:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1462,7 +1494,7 @@ state 70:
 	exp : exp . GE exp 
 	exp : exp . AND exp 
 	exp : exp . OR exp 
-	explist : exp .  (reduce by rule 39)
+	explist : exp .  (reduce by rule 42)
 
 	PLUS	shift 26
 	MINUS	shift 25
@@ -1478,10 +1510,10 @@ state 70:
 	OR	shift 15
 
 
-	.	reduce by rule 39
+	.	reduce by rule 42
 
 
-state 71:
+state 74:
 
 	exp : ID LPAREN RPAREN .  (reduce by rule 7)
 
@@ -1490,17 +1522,17 @@ state 71:
 	.	reduce by rule 7
 
 
-state 72:
+state 75:
 
 	exp : LET decs IN optseq . END 
 
-	END	shift 85
+	END	shift 87
 
 
 	.	error
 
 
-state 73:
+state 76:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1528,13 +1560,13 @@ state 73:
 	GE	shift 17
 	AND	shift 16
 	OR	shift 15
-	TO	shift 86
+	TO	shift 88
 
 
 	.	error
 
 
-state 74:
+state 77:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1567,7 +1599,7 @@ state 74:
 	.	reduce by rule 27
 
 
-state 75:
+state 78:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1596,13 +1628,13 @@ state 75:
 	GE	shift 17
 	AND	shift 16
 	OR	shift 15
-	ELSE	shift 87
+	ELSE	shift 89
 
 
 	.	reduce by rule 26
 
 
-state 76:
+state 79:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1616,7 +1648,7 @@ state 76:
 	exp : exp . GE exp 
 	exp : exp . AND exp 
 	exp : exp . OR exp 
-	expseq : expseq COLON exp .  (reduce by rule 36)
+	expseq : expseq COLON exp .  (reduce by rule 39)
 
 	PLUS	shift 26
 	MINUS	shift 25
@@ -1632,19 +1664,10 @@ state 76:
 	OR	shift 15
 
 
-	.	reduce by rule 36
+	.	reduce by rule 39
 
 
-state 77:
-
-	access : access DOT ID .  (reduce by rule 32)
-
-
-
-	.	reduce by rule 32
-
-
-state 78:
+state 80:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1658,9 +1681,9 @@ state 78:
 	exp : exp . GE exp 
 	exp : exp . AND exp 
 	exp : exp . OR exp 
-	access : access LBRACK exp . RBRACK 
+	access : LBRACK exp . RBRACK 
 
-	RBRACK	shift 88
+	RBRACK	shift 90
 	PLUS	shift 26
 	MINUS	shift 25
 	TIMES	shift 24
@@ -1678,7 +1701,7 @@ state 78:
 	.	error
 
 
-state 79:
+state 81:
 
 	exp : ID LBRACE fieldlist RBRACE .  (reduce by rule 22)
 
@@ -1687,61 +1710,20 @@ state 79:
 	.	reduce by rule 22
 
 
-state 80:
+state 82:
 
 	fieldlist : fieldlist COMMA . field 
 
-	ID	shift 67
+	ID	shift 70
 
-	field	goto 89
-
-	.	error
-
-
-state 81:
-
-	field : ID EQ . exp 
-
-	ID	shift 13
-	INT	shift 12
-	STRING	shift 11
-	LPAREN	shift 10
-	MINUS	shift 9
-	IF	shift 8
-	WHILE	shift 7
-	FOR	shift 6
-	LET	shift 5
-	BREAK	shift 4
-	NIL	shift 3
-
-	exp	goto 90
-	lvalue	goto 1
-
-	.	error
-
-
-state 82:
-
-	exp : ID LBRACK exp RBRACK . OF exp 
-
-	OF	shift 91
-
+	field	goto 91
 
 	.	error
 
 
 state 83:
 
-	exp : ID LPAREN explist RPAREN .  (reduce by rule 8)
-
-
-
-	.	reduce by rule 8
-
-
-state 84:
-
-	explist : explist COMMA . exp 
+	field : ID EQ . exp 
 
 	ID	shift 13
 	INT	shift 12
@@ -1761,40 +1743,29 @@ state 84:
 	.	error
 
 
+state 84:
+
+	exp : ID LBRACK exp RBRACK . OF exp 
+	access : LBRACK exp RBRACK .  (reduce by rule 36)
+
+	OF	shift 93
+
+
+	.	reduce by rule 36
+
+
 state 85:
 
-	exp : LET decs IN optseq END .  (reduce by rule 29)
+	exp : ID LPAREN explist RPAREN .  (reduce by rule 8)
 
 
 
-	.	reduce by rule 29
+	.	reduce by rule 8
 
 
 state 86:
 
-	exp : FOR ID ASSIGN exp TO . exp DO exp 
-
-	ID	shift 13
-	INT	shift 12
-	STRING	shift 11
-	LPAREN	shift 10
-	MINUS	shift 9
-	IF	shift 8
-	WHILE	shift 7
-	FOR	shift 6
-	LET	shift 5
-	BREAK	shift 4
-	NIL	shift 3
-
-	exp	goto 93
-	lvalue	goto 1
-
-	.	error
-
-
-state 87:
-
-	exp : IF exp THEN exp ELSE . exp 
+	explist : explist COMMA . exp 
 
 	ID	shift 13
 	INT	shift 12
@@ -1814,60 +1785,18 @@ state 87:
 	.	error
 
 
+state 87:
+
+	exp : LET decs IN optseq END .  (reduce by rule 29)
+
+
+
+	.	reduce by rule 29
+
+
 state 88:
 
-	access : access LBRACK exp RBRACK .  (reduce by rule 33)
-
-
-
-	.	reduce by rule 33
-
-
-state 89:
-
-	fieldlist : fieldlist COMMA field .  (reduce by rule 40)
-
-
-
-	.	reduce by rule 40
-
-
-state 90:
-
-	exp : exp . PLUS exp 
-	exp : exp . MINUS exp 
-	exp : exp . TIMES exp 
-	exp : exp . DIVIDE exp 
-	exp : exp . EQ exp 
-	exp : exp . NEQ exp 
-	exp : exp . LT exp 
-	exp : exp . LE exp 
-	exp : exp . GT exp 
-	exp : exp . GE exp 
-	exp : exp . AND exp 
-	exp : exp . OR exp 
-	field : ID EQ exp .  (reduce by rule 42)
-
-	PLUS	shift 26
-	MINUS	shift 25
-	TIMES	shift 24
-	DIVIDE	shift 23
-	EQ	shift 22
-	NEQ	shift 21
-	LT	shift 20
-	LE	shift 19
-	GT	shift 18
-	GE	shift 17
-	AND	shift 16
-	OR	shift 15
-
-
-	.	reduce by rule 42
-
-
-state 91:
-
-	exp : ID LBRACK exp RBRACK OF . exp 
+	exp : FOR ID ASSIGN exp TO . exp DO exp 
 
 	ID	shift 13
 	INT	shift 12
@@ -1887,6 +1816,46 @@ state 91:
 	.	error
 
 
+state 89:
+
+	exp : IF exp THEN exp ELSE . exp 
+
+	ID	shift 13
+	INT	shift 12
+	STRING	shift 11
+	LPAREN	shift 10
+	MINUS	shift 9
+	IF	shift 8
+	WHILE	shift 7
+	FOR	shift 6
+	LET	shift 5
+	BREAK	shift 4
+	NIL	shift 3
+
+	exp	goto 96
+	lvalue	goto 1
+
+	.	error
+
+
+state 90:
+
+	access : LBRACK exp RBRACK .  (reduce by rule 36)
+
+
+
+	.	reduce by rule 36
+
+
+state 91:
+
+	fieldlist : fieldlist COMMA field .  (reduce by rule 43)
+
+
+
+	.	reduce by rule 43
+
+
 state 92:
 
 	exp : exp . PLUS exp 
@@ -1901,7 +1870,7 @@ state 92:
 	exp : exp . GE exp 
 	exp : exp . AND exp 
 	exp : exp . OR exp 
-	explist : explist COMMA exp .  (reduce by rule 38)
+	field : ID EQ exp .  (reduce by rule 45)
 
 	PLUS	shift 26
 	MINUS	shift 25
@@ -1917,10 +1886,65 @@ state 92:
 	OR	shift 15
 
 
-	.	reduce by rule 38
+	.	reduce by rule 45
 
 
 state 93:
+
+	exp : ID LBRACK exp RBRACK OF . exp 
+
+	ID	shift 13
+	INT	shift 12
+	STRING	shift 11
+	LPAREN	shift 10
+	MINUS	shift 9
+	IF	shift 8
+	WHILE	shift 7
+	FOR	shift 6
+	LET	shift 5
+	BREAK	shift 4
+	NIL	shift 3
+
+	exp	goto 97
+	lvalue	goto 1
+
+	.	error
+
+
+state 94:
+
+	exp : exp . PLUS exp 
+	exp : exp . MINUS exp 
+	exp : exp . TIMES exp 
+	exp : exp . DIVIDE exp 
+	exp : exp . EQ exp 
+	exp : exp . NEQ exp 
+	exp : exp . LT exp 
+	exp : exp . LE exp 
+	exp : exp . GT exp 
+	exp : exp . GE exp 
+	exp : exp . AND exp 
+	exp : exp . OR exp 
+	explist : explist COMMA exp .  (reduce by rule 41)
+
+	PLUS	shift 26
+	MINUS	shift 25
+	TIMES	shift 24
+	DIVIDE	shift 23
+	EQ	shift 22
+	NEQ	shift 21
+	LT	shift 20
+	LE	shift 19
+	GT	shift 18
+	GE	shift 17
+	AND	shift 16
+	OR	shift 15
+
+
+	.	reduce by rule 41
+
+
+state 95:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1948,13 +1972,13 @@ state 93:
 	GE	shift 17
 	AND	shift 16
 	OR	shift 15
-	DO	shift 96
+	DO	shift 98
 
 
 	.	error
 
 
-state 94:
+state 96:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -1987,7 +2011,7 @@ state 94:
 	.	reduce by rule 25
 
 
-state 95:
+state 97:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -2020,7 +2044,7 @@ state 95:
 	.	reduce by rule 23
 
 
-state 96:
+state 98:
 
 	exp : FOR ID ASSIGN exp TO exp DO . exp 
 
@@ -2036,13 +2060,13 @@ state 96:
 	BREAK	shift 4
 	NIL	shift 3
 
-	exp	goto 97
+	exp	goto 99
 	lvalue	goto 1
 
 	.	error
 
 
-state 97:
+state 99:
 
 	exp : exp . PLUS exp 
 	exp : exp . MINUS exp 
@@ -2075,7 +2099,7 @@ state 97:
 	.	reduce by rule 28
 
 
-state 98:
+state 100:
 
 
 	EOF	accept
@@ -2083,5 +2107,5 @@ state 98:
 
 	.	error
 
-407 of 825 action table entries left after compaction
-79 goto table entries
+408 of 828 action table entries left after compaction
+81 goto table entries

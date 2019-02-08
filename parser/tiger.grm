@@ -1,23 +1,36 @@
 %%
+
 %term
     EOF 
   | ID of string
   | INT of int | STRING of string 
   | COMMA | COLON | SEMICOLON | LPAREN | RPAREN | LBRACK | RBRACK 
   | LBRACE | RBRACE | DOT 
-  | PLUS | MINUS | TIMES | DIVIDE | EQ | NEQ | LT | LE | GT | GE
+  | PLUS | MINUS | UMINUS | TIMES | DIVIDE | EQ | NEQ | LT | LE | GT | GE
   | AND | OR | ASSIGN
   | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
 
-%nonterm  exp | program
+%nonterm
+    program | exp | lvalue | access | optseq | expseq | explist | fieldlist | field | decs | dec | tydec | vardec
+  | fundec
 
 %pos int
 %verbose
 %start program
 %eop EOF
 %noshift EOF
+
+%nonassoc THEN DO
+%right ELSE
+%nonassoc ASSIGN OF
+%left OR
+%left AND
+%nonassoc EQ NEQ LT LE GT GE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%left UMINUS
 
 %name Tiger
 
@@ -32,7 +45,61 @@
 
 %%
 
-program	: exp				()
+program	: exp				            ()
 
-	
-exp: 			()
+exp: lvalue                             ()
+   | NIL                                ()
+   | LPAREN optseq RPAREN               ()
+   | INT                                ()
+   | STRING                             ()
+   | MINUS exp %prec UMINUS             ()
+   | ID LPAREN RPAREN                   ()
+   | ID LPAREN explist RPAREN           ()
+   | exp PLUS exp                       ()
+   | exp MINUS exp                      ()
+   | exp TIMES exp                      ()
+   | exp DIVIDE exp                     ()
+   | exp EQ exp                         ()
+   | exp NEQ exp                        ()
+   | exp LT exp                         ()
+   | exp LE exp                         ()
+   | exp GT exp                         ()
+   | exp GE exp                         ()
+   | exp AND exp                        ()
+   | exp OR exp                         ()
+   | ID LBRACE RBRACE                   ()
+   | ID LBRACE fieldlist RBRACE         ()
+   | ID LBRACK exp RBRACK OF exp        ()
+   | lvalue ASSIGN exp                  ()
+   | IF exp THEN exp ELSE exp           ()
+   | IF exp THEN exp                    ()
+   | WHILE exp DO exp                   ()
+   | FOR ID ASSIGN exp TO exp DO exp    ()
+   | LET decs IN optseq END             ()
+   | BREAK                              ()
+
+lvalue: ID access                       ()
+
+access: access DOT ID                   ()
+      | access LBRACK exp RBRACK        ()
+
+optseq: expseq                          ()
+      |                                 ()
+
+expseq: expseq COLON exp                ()
+      | exp                             ()
+
+explist: explist COMMA exp              ()
+       | exp                            ()
+
+fieldlist: fieldlist COMMA field        ()
+         | field                        ()
+
+field: ID EQ exp                        ()
+
+decs: decs dec                          ()
+    |                                   ()
+
+dec: tydec                              ()
+   | vardec                             ()
+   | fundec                             ()

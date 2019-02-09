@@ -26,7 +26,7 @@ structure A = Absyn
 %noshift EOF
 
 %nonassoc THEN DO
-%right ELSE
+%nonassoc ELSE
 %nonassoc ASSIGN OF
 %left OR
 %left AND
@@ -48,7 +48,7 @@ structure A = Absyn
 
 %%
 
-program	: exp                           (exp)
+program: exp                            (exp)
 
 exp: lvalue                             ()
    | NIL                                (A.NilExp)

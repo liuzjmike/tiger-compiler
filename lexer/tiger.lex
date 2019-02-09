@@ -84,7 +84,7 @@ format=[ \t\f];
 <INITIAL>"<"        => (Tokens.LT(yypos,yypos+1));
 <INITIAL>"<="       => (Tokens.LE(yypos,yypos+2));
 <INITIAL>">"        => (Tokens.GT(yypos,yypos+1));
-<INITIAL>"<="       => (Tokens.GE(yypos,yypos+2));
+<INITIAL>">="       => (Tokens.GE(yypos,yypos+2));
 <INITIAL>"&"        => (Tokens.AND(yypos,yypos+1));
 <INITIAL>"|"        => (Tokens.OR(yypos,yypos+1));
 <INITIAL>":="       => (Tokens.ASSIGN(yypos,yypos+2));

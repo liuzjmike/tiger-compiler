@@ -23,7 +23,7 @@
 %noshift EOF
 
 %nonassoc THEN DO
-%right ELSE
+%nonassoc ELSE
 %nonassoc ASSIGN OF
 %left OR
 %left AND

@@ -35,7 +35,7 @@
 %name Tiger
 
 %keyword WHILE FOR TO BREAK LET IN END FUNCTION VAR TYPE ARRAY IF THEN ELSE 
-	DO OF NIL
+    DO OF NIL
 
 %prefer THEN ELSE LPAREN
 
@@ -45,7 +45,7 @@
 
 %%
 
-program	: exp				            ()
+program: exp				            ()
 
 exp: lvalue                             ()
    | NIL                                ()

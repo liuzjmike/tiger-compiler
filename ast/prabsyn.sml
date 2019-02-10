@@ -126,3 +126,4 @@ end
 
 end
 
+fun aprint ast = PrintAbsyn.print (TextIO.stdOut, ast)

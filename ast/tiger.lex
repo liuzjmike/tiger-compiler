@@ -44,7 +44,7 @@ fun eof() =
 digit=[0-9];
 digits={digit}+;
 letter=[a-zA-Z];
-format=[ \t\f];
+format=[ \t\012];
 %s COMMENT STRING ESCAPE FORMAT;
 
 %%

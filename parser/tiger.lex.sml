@@ -2402,26 +2402,26 @@ fun yyQ3 (strm, lastMatch : yymatch) = (case (yygetc(strm))
               then UserDeclarations.eof(yyarg)
               else yystuck(lastMatch)
         | SOME(inp, strm') =>
-            if inp = #"!"
+            if inp = #"\r"
               then yyQ27(strm', lastMatch)
-            else if inp < #"!"
+            else if inp < #"\r"
               then if inp = #"\n"
                   then yyQ29(strm', lastMatch)
                 else if inp < #"\n"
                   then if inp = #"\t"
                       then yyQ28(strm', lastMatch)
                       else yyQ27(strm', lastMatch)
-                else if inp = #" "
+                else if inp = #"\v"
+                  then yyQ27(strm', lastMatch)
+                  else yyQ28(strm', lastMatch)
+            else if inp = #"!"
+              then yyQ27(strm', lastMatch)
+            else if inp < #"!"
+              then if inp = #" "
                   then yyQ28(strm', lastMatch)
                   else yyQ27(strm', lastMatch)
-            else if inp = #"]"
-              then yyQ27(strm', lastMatch)
-            else if inp < #"]"
-              then if inp = #"\\"
-                  then yyQ30(strm', lastMatch)
-                  else yyQ27(strm', lastMatch)
-            else if inp = #"f"
-              then yyQ28(strm', lastMatch)
+            else if inp = #"\\"
+              then yyQ30(strm', lastMatch)
               else yyQ27(strm', lastMatch)
       (* end case *))
 fun yyQ22 (strm, lastMatch : yymatch) = (case (yygetc(strm))
@@ -2499,42 +2499,42 @@ fun yyQ2 (strm, lastMatch : yymatch) = (case (yygetc(strm))
               then UserDeclarations.eof(yyarg)
               else yystuck(lastMatch)
         | SOME(inp, strm') =>
-            if inp = #"\\"
-              then yyQ18(strm', lastMatch)
-            else if inp < #"\\"
-              then if inp = #"!"
+            if inp = #"0"
+              then yyQ19(strm', lastMatch)
+            else if inp < #"0"
+              then if inp = #"\r"
                   then yyQ15(strm', lastMatch)
-                else if inp < #"!"
+                else if inp < #"\r"
                   then if inp = #"\n"
                       then yyQ17(strm', lastMatch)
                     else if inp < #"\n"
                       then if inp = #"\t"
                           then yyQ16(strm', lastMatch)
                           else yyQ15(strm', lastMatch)
-                    else if inp = #" "
+                    else if inp = #"\v"
+                      then yyQ15(strm', lastMatch)
+                      else yyQ16(strm', lastMatch)
+                else if inp = #"!"
+                  then yyQ15(strm', lastMatch)
+                else if inp < #"!"
+                  then if inp = #" "
                       then yyQ16(strm', lastMatch)
                       else yyQ15(strm', lastMatch)
-                else if inp = #"0"
-                  then yyQ19(strm', lastMatch)
-                else if inp < #"0"
-                  then if inp = #"\""
-                      then yyQ18(strm', lastMatch)
-                      else yyQ15(strm', lastMatch)
-                else if inp <= #"9"
-                  then yyQ19(strm', lastMatch)
+                else if inp = #"\""
+                  then yyQ18(strm', lastMatch)
                   else yyQ15(strm', lastMatch)
-            else if inp = #"g"
+            else if inp = #"_"
               then yyQ15(strm', lastMatch)
-            else if inp < #"g"
-              then if inp = #"_"
+            else if inp < #"_"
+              then if inp = #"\\"
+                  then yyQ18(strm', lastMatch)
+                else if inp < #"\\"
+                  then if inp <= #"9"
+                      then yyQ19(strm', lastMatch)
+                      else yyQ15(strm', lastMatch)
+                else if inp = #"]"
                   then yyQ15(strm', lastMatch)
-                else if inp < #"_"
-                  then if inp = #"]"
-                      then yyQ15(strm', lastMatch)
-                      else yyQ20(strm', lastMatch)
-                else if inp = #"f"
-                  then yyQ16(strm', lastMatch)
-                  else yyQ15(strm', lastMatch)
+                  else yyQ20(strm', lastMatch)
             else if inp = #"o"
               then yyQ15(strm', lastMatch)
             else if inp < #"o"

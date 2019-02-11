@@ -129,5 +129,5 @@ format=[ \t\f];
 <FORMAT>\n          => (newLine yypos; continue());
 <FORMAT>{format}    => (continue());
 <FORMAT>"\\"        => (YYBEGIN STRING; continue());
-<FORMAT>.           => (ErrorMsg.error yypos ("illegal formatting character " ^ yytext); appendCurrentString yytext;
+<FORMAT>.           => (ErrorMsg.error yypos "unclosed formatting sequence"; appendCurrentString yytext;
                         YYBEGIN STRING; continue());

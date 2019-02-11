@@ -375,7 +375,7 @@ fun yyAction68 (strm, lastMatch : yymatch) = let
       val yytext = yymktext(strm)
       in
         yystrm := strm;
-        (ErrorMsg.error yypos ("illegal formatting character " ^ yytext); appendCurrentString yytext;
+        (ErrorMsg.error yypos "unclosed formatting sequence"; appendCurrentString yytext;
                         YYBEGIN STRING; continue())
       end
 fun yyQ68 (strm, lastMatch : yymatch) = (case (yygetc(strm))

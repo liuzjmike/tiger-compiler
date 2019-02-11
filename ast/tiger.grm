@@ -88,7 +88,7 @@ exp: lvalue                             (A.VarExp lvalue)
    | IF exp THEN exp                    (A.IfExp{test=exp1, then'=exp2, else'=NONE, pos=IFleft})
    | WHILE exp DO exp                   (A.WhileExp{test=exp1, body=exp2, pos=WHILEleft})
    | FOR ID ASSIGN exp TO exp DO exp    (A.ForExp{var=symbol ID, escape=ref true, lo=exp1, hi=exp2, body=exp3, pos=FORleft})
-   | LET decs IN expseq_opt END         (A.LetExp{decs=decs, body=expseq_opt, pos=LETleft}) (*Group fundecs and typdecs here*)
+   | LET decs IN expseq_opt END         (A.LetExp{decs=decs, body=expseq_opt, pos=LETleft})
    | BREAK                              (A.BreakExp BREAKleft)
 
 lvalue: ID                              (makeVar(ID, IDleft))

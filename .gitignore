@@ -1,2 +1,4 @@
 .cm/
 sml.json
+*.lex.*
+*.grm.*

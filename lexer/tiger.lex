@@ -19,6 +19,8 @@ fun newLine pos = (lineNum := !lineNum + 1; linePos := pos :: !linePos)
 
 fun translateControl s = str (chr(ord(String.sub(s, 1))-64))
 
+fun endString pos = (inString := false; Tokens.STRING(!currentString, !stringStart, pos+1))
+
 fun eof() =
     let val pos = hd(!linePos)
     in
@@ -105,10 +107,9 @@ format=[ \t\012];
 <COMMENT>\n         => (newLine yypos; continue());
 <COMMENT>.          => (continue());
 
-<STRING>\"          => (YYBEGIN INITIAL; inString := false; Tokens.STRING(!currentString, !stringStart, yypos+1));
+<STRING>\"          => (YYBEGIN INITIAL; endString yypos);
 <STRING>\\          => (YYBEGIN ESCAPE; continue());
-<STRING>\n          => (ErrorMsg.error yypos "unclosed string"; newLine yypos; YYBEGIN INITIAL; inString := false;
-                        Tokens.STRING(!currentString, !stringStart, yypos+1));
+<STRING>\n          => (ErrorMsg.error yypos "unclosed string"; newLine yypos; YYBEGIN INITIAL; endString yypos);
 <STRING>.           => (appendCurrentString yytext; continue());
 
 <ESCAPE>n           => (appendCurrentString "\n"; YYBEGIN STRING; continue());
@@ -125,6 +126,7 @@ format=[ \t\012];
 
 <FORMAT>\n          => (newLine yypos; continue());
 <FORMAT>{format}    => (continue());
-<FORMAT>"\\"        => (YYBEGIN STRING; continue());
+<FORMAT>\\          => (YYBEGIN STRING; continue());
+<FORMAT>\"          => (ErrorMsg.error yypos "unclosed formatting sequence"; YYBEGIN INITIAL; endString yypos);
 <FORMAT>.           => (ErrorMsg.error yypos "unclosed formatting sequence"; appendCurrentString yytext;
                         YYBEGIN STRING; continue());

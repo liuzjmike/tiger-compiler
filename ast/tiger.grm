@@ -37,9 +37,7 @@ fun makeVar (id, pos) = A.SimpleVar(symbol id, pos)
 %eop EOF
 %noshift EOF
 
-%nonassoc THEN DO
-%nonassoc ELSE
-%nonassoc ASSIGN OF
+%nonassoc ASSIGN DO THEN ELSE OF
 %left OR
 %left AND
 %nonassoc EQ NEQ LT LE GT GE

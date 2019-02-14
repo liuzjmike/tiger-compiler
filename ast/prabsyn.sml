@@ -70,7 +70,7 @@ fun print (outstream, e0) =
 		(indent d; sayln "WhileExp("; exp(test,d+1); sayln ",";
 		 exp(body,d+1); say ")")
     | exp(A.ForExp{var=v,escape=b,lo,hi,body,pos},d) =
-		(indent d; sayln "ForExp(";
+		(indent d; sayln "ForExp("; indent (d+1);
 		 say(Symbol.name v); say ","; say(Bool.toString (!b)); sayln ",";
 		 exp(lo,d+1); sayln ","; exp(hi,d+1); sayln ",";
 		 exp(body,d+1); say ")")
@@ -88,13 +88,15 @@ fun print (outstream, e0) =
 			(indent d; say "("; say(Symbol.name name);
 			 say ","; say(Bool.toString(!escape)); 
 			 say ","; say(Symbol.name typ); say ")")
-		fun f({name,params,result,body,pos},d) =
-		   (indent d; say "("; say (Symbol.name name); say ",[";
-		    dolist d field params; sayln "],";
-		    case result of NONE => say "NONE"
-			 | SOME(s,_) => (say "SOME("; say(Symbol.name s); say ")");
-		    sayln ","; exp(body,d+1); say ")")
-	     in indent d; say "FunctionDec["; dolist d f l; say "]"
+			fun f({name,params,result,body,pos},d) =
+				(indent d; say "("; say (Symbol.name name); say ",[";
+				 	dolist d field params; sayln "],";
+					indent (d+1);
+				 	case result of
+				 	 	NONE => say "NONE"
+				 	| SOME(s,_) => (say "SOME("; say(Symbol.name s); say ")");
+					sayln ","; exp(body,d+1); say ")")
+	    in indent d; say "FunctionDec["; dolist d f l; say "]"
 	    end
     | dec(A.VarDec{name,escape,typ,init,pos},d) =
 	   (indent d; say "VarDec("; say(Symbol.name name); say ",";
@@ -126,4 +128,4 @@ end
 
 end
 
-fun aprint ast = PrintAbsyn.print (TextIO.stdOut, ast)
+fun printAbsyn ast = PrintAbsyn.print (TextIO.stdOut, ast)

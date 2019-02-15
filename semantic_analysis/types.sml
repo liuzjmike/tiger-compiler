@@ -10,5 +10,6 @@ struct
   | STRING
   | ARRAY of (unit -> ty) * unique
   | UNIT
+  | BOTTOM
 
 end

@@ -9,10 +9,15 @@ struct
     val error = ErrorMsg.error
 
     fun transProg exp =
-        let fun checkInt({exp, ty}, pos) =
+        let fun checkInt ({exp, ty}, pos) =
                 case ty
                     of  T.INT => exp
                     |   _ => (error pos "integer required"; ())
+            
+            fun checkUnit ({exp, ty}, pos) =
+                case ty
+                    of  T.UNIT => exp
+                    |   _ => (error pos "unit required"; ())
 
             fun transExp (venv, tenv, inLoop, exp) =
                 let fun trexp (A.VarExp var) = trvar var
@@ -53,8 +58,18 @@ struct
                         end
                     |   trexp (A.AssignExp {var, exp, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
                     |   trexp (A.IfExp {test, then', else', pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
-                    |   trexp (A.WhileExp {test, body, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
-                    |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.WhileExp {test, body, pos}) =
+                        let val testExp = checkInt (trexp test, pos)
+                            val bodyExp = checkUnit (transExp (venv, tenv, true, body), pos)
+                        in {exp=(), ty=T.UNIT}
+                        end
+                    |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) =
+                        let val loExp = checkInt (trexp lo, pos)
+                            val hiExp = checkInt (trexp hi, pos)
+                            val venv' = S.enter (venv, var, E.VarEntry {ty=T.INT, forIdx=true})
+                            val bodyExp = checkUnit (transExp (venv', tenv, true, body), pos)
+                        in {exp=(), ty=T.UNIT}
+                        end
                     |   trexp (A.BreakExp pos) =
                         if inLoop
                         then {exp=(), ty=T.BOTTOM}
@@ -84,14 +99,10 @@ struct
                         end
                     |   trvar (A.SubscriptVar (lvalue, exp, pos)) =
                         let val {exp=lvExp, ty=ty} = trvar lvalue
+                            val idxExp = checkInt (trexp exp, pos)
                         in
                             case ty
-                                of  T.ARRAY (eleTy, unique) =>
-                                    let val {exp=idxExp, ty=idxTy} = trexp exp
-                                    in case idxTy
-                                        of  T.INT => {exp=(), ty=eleTy ()}
-                                        |   _ => (error pos "index with non-int type"; {exp=(), ty=T.BOTTOM})
-                                    end
+                                of  T.ARRAY (eleTy, unique) => {exp=(), ty=eleTy ()}
                                 |   T.BOTTOM => {exp=(), ty=T.BOTTOM}
                                 |   _ => (error pos "index non-array type"; {exp=(), ty=T.BOTTOM})
                         end

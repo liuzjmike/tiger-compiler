@@ -30,7 +30,29 @@ struct
                         checkInt (trexp right, pos);
                         {exp=(), ty=T.INT}
                     )
-                    |   trexp exp = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.OpExp {left, oper=A.TimesOp, right, pos}) = (
+                        checkInt (trexp left, pos);
+                        checkInt (trexp right, pos);
+                        {exp=(), ty=T.INT}
+                    )
+                    |   trexp (A.OpExp {left, oper=A.DivideOp, right, pos}) = (
+                        checkInt (trexp left, pos);
+                        checkInt (trexp right, pos);
+                        {exp=(), ty=T.INT}
+                    )
+                    (* TODO: Comparison operators *)
+                    |   trexp (A.RecordExp {fields, typ, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.SeqExp expList) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.AssignExp {var, exp, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.IfExp {test, then', else', pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.WhileExp {test, body, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.BreakExp pos) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.LetExp {decs, body, pos}) =
+                        let val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, decs)
+                        in transExp (venv', tenv', body)
+                        end
+                    |   trexp (A.ArrayExp {typ, size, init, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
 
                     and trvar (A.SimpleVar (id, pos)) = (
                         case S.look (venv, id)

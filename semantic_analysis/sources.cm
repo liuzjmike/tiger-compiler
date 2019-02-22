@@ -15,4 +15,5 @@ table.sig
 table.sml
 tiger.lex
 tiger.grm
+translate.sml
 types.sml

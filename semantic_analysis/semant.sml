@@ -15,12 +15,22 @@ struct
                 |   _ => (error pos "integer required"; ())
 
             fun transExp (venv, tenv, exp) =
-                let fun trexp (A.OpExp {left, oper=A.PlusOp, right, pos}) = (
+                let fun trexp (A.VarExp var) = trvar var
+                    |   trexp A.NilExp = {exp=(), ty=T.NIL}
+                    |   trexp (A.IntExp i) = {exp=(), ty=T.INT}
+                    |   trexp (A.StringExp (s, pos)) = {exp=(), ty=T.STRING}
+                    |   trexp (A.CallExp {func, args, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.OpExp {left, oper=A.PlusOp, right, pos}) = (
                         checkInt (trexp left, pos);
                         checkInt (trexp right, pos);
                         {exp=(), ty=T.INT}
                     )
-                    |   trexp exp = {exp=(), ty=T.BOTTOM}
+                    |   trexp (A.OpExp {left, oper=A.MinusOp, right, pos}) = (
+                        checkInt (trexp left, pos);
+                        checkInt (trexp right, pos);
+                        {exp=(), ty=T.INT}
+                    )
+                    |   trexp exp = {exp=(), ty=T.BOTTOM} (* TODO *)
 
                     and trvar (A.SimpleVar (id, pos)) = (
                         case S.look (venv, id)
@@ -30,7 +40,7 @@ struct
                             {exp=(), ty=T.BOTTOM}
                         )
                     )
-                    |   trvar (var) = {exp=(), ty=T.BOTTOM}
+                    |   trvar (var) = {exp=(), ty=T.BOTTOM} (* TODO *)
                 in
                     trexp exp
                 end
@@ -80,7 +90,7 @@ struct
                             transTy (name, ty, unique, S.empty) ()
                         )) tenv decList}
                 end
-            |   transDec (venv, tenv, dec) = {venv=venv, tenv=tenv}
+            |   transDec (venv, tenv, dec) = {venv=venv, tenv=tenv} (* TODO *)
 
         in
             #exp (transExp (E.base_venv, E.base_tenv, exp))

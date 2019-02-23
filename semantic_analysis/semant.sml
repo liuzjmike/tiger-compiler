@@ -10,6 +10,8 @@ struct
 
     fun transProg exp =
         let fun unboundTypeError (ty, pos) = error pos ("unbound type " ^ S.name ty)
+                    
+            fun canAccept (formal, actual) = T.isSubtype (actual, formal) orelse T.isBottom formal
 
             fun transExp (venv, tenv, inLoop, exp) =
                 let fun checkInt ({exp, ty}, pos) =
@@ -89,7 +91,36 @@ struct
                         let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
                         in {exp=(), ty=T.INT}
                         end
-                    |   trexp (A.RecordExp {fields, typ, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.RecordExp {fields, typ, pos}) =
+                        let fun checkFields ([], []) = ()
+                            |   checkFields ([], f2::l2) = (
+                                error pos "too many fields in record creation";
+                                map (fn (id, exp, fieldPos) => trexp exp);
+                                ()
+                            )
+                            |   checkFields (f1::l1, []) = error pos "insufficient fields in record creation"
+                            |   checkFields ((id1, ty1)::l1, (id2, exp, fieldPos)::l2) = (
+                                if id1 = id2 then () else error fieldPos "incorrect field name";
+                                let val {exp=fieldExp, ty=fieldTy} = trexp exp
+                                in if canAccept (ty1 (), fieldTy) then () else error fieldPos "incorrect field type"
+                                end;
+                                checkFields (l1, l2)
+                            )
+                        in case S.look (tenv, typ)
+                            of  SOME ty => (
+                                case ty
+                                of  T.RECORD (fieldList, unique) => (
+                                    checkFields (fieldList, fields);
+                                    {exp=(), ty=T.RECORD (fieldList, unique)}
+                                )
+                                |   T.BOTTOM => {exp=(), ty=T.RECORD ([], ref ())}
+                                |   _ => (
+                                    error pos "create record with non-record type";
+                                    {exp=(), ty=T.RECORD ([], ref ())}
+                                )
+                            )
+                            |   NONE => (unboundTypeError (typ, pos); {exp=(), ty=T.RECORD ([], ref ())})
+                        end
                     |   trexp (A.SeqExp expList) =
                         let fun f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end
                             |   f ((exp, pos)::l) =
@@ -151,7 +182,7 @@ struct
                         let val (eleTy, unique) = case S.look (tenv, typ)
                                 of  SOME ty => (
                                     case ty
-                                        of  T.ARRAY (ty', unique) => (ty' (), unique)
+                                        of  T.ARRAY (eleTy, unique) => (eleTy (), unique)
                                         |   T.BOTTOM => (T.BOTTOM, ref())
                                         |   _ => (
                                             error pos ("create array with non-array type " ^ S.name typ);
@@ -162,7 +193,7 @@ struct
                             val sizeExp = checkInt (trexp size, pos)
                             val {exp=initExp, ty=initTy} = trexp init
                         in
-                            if T.isSubtype (initTy, eleTy) orelse T.isBottom eleTy
+                            if canAccept (eleTy, initTy)
                             then ()
                             else error pos "inconsistent initial value type";
                             {exp=(), ty=T.ARRAY (fn () => eleTy, unique)}
@@ -210,7 +241,7 @@ struct
                         |   NONE => (unboundTypeError (typ', typPos); T.BOTTOM)
                     val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
                 in 
-                    if T.isSubtype (valTy, varTy) orelse T.isBottom varTy
+                    if canAccept (varTy, valTy)
                     then ()
                     else error pos "declare variable with wrong initial value type";
                     {venv=S.enter (venv, name, E.VarEntry {ty=varTy, forIdx=false}), tenv=tenv}

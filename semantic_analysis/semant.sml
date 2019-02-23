@@ -98,8 +98,34 @@ struct
                             val (resList, ty) = f expList
                         in {exp=(), ty=ty}
                         end
-                    |   trexp (A.AssignExp {var, exp, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
-                    |   trexp (A.IfExp {test, then', else', pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.AssignExp {var, exp, pos}) = 
+                        let val {exp=varExp, ty=varTy} = trvar var
+                            val {exp=valExp, ty=valTy} = trexp exp
+                        in
+                            if T.isSubtype (valTy, varTy)
+                            then ()
+                            else error pos "assign value of wrong type";
+                            {exp=(), ty=T.UNIT}
+                        end
+                    |   trexp (A.IfExp {test, then', else'=SOME else'', pos}) =
+                        let val testExp = checkInt (trexp test, pos)
+                            val {exp=thenExp, ty=thenTy} = trexp then'
+                            val {exp=elseExp, ty=elseTy} = trexp else''
+                        in
+                            if T.isSubtype (thenTy, elseTy)
+                            then {exp=(), ty=elseTy}
+                            else if T.isSubtype (elseTy, thenTy)
+                                then {exp=(), ty=thenTy}
+                                else (
+                                    error pos "types of if branches do not agree";
+                                    {exp=(), ty=T.BOTTOM}
+                                )
+                        end
+                    |   trexp (A.IfExp {test, then', else'=NONE, pos}) =
+                        let val testExp = checkInt (trexp test, pos)
+                            val thenExp = checkUnit (trexp then', pos)
+                        in {exp=(), ty=T.UNIT}
+                        end
                     |   trexp (A.WhileExp {test, body, pos}) =
                         let val testExp = checkInt (trexp test, pos)
                             val bodyExp = checkUnit (transExp (venv, tenv, true, body), pos)

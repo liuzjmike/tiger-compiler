@@ -9,43 +9,85 @@ struct
     val error = ErrorMsg.error
 
     fun transProg exp =
-        let fun checkInt ({exp, ty}, pos) =
-                case ty
-                    of  T.INT => exp
-                    |   _ => (error pos "integer required"; ())
-            
-            fun checkUnit ({exp, ty}, pos) =
-                case ty
-                    of  T.UNIT => exp
-                    |   _ => (error pos "unit required"; ())
-
+        let fun unboundTypeError (ty, pos) = error pos ("unbound type " ^ S.name ty)
             fun transExp (venv, tenv, inLoop, exp) =
-                let fun trexp (A.VarExp var) = trvar var
+                let fun checkInt ({exp, ty}, pos) =
+                        case ty
+                            of  T.INT => exp
+                            |   T.BOTTOM => exp
+                            |   _ => (error pos "integer required"; ())
+
+                    fun checkArithmeticOperands (expty1, expty2, pos) =
+                        (checkInt (expty1, pos), checkInt (expty2, pos))
+                    
+                    fun checkComparisonOperands ({exp=exp1, ty=ty1}, {exp=exp2, ty=ty2}, pos) = (
+                        if T.isSubtype (ty1, ty2) orelse T.isSubtype (ty2, ty1)
+                        then case (ty1, ty2)
+                            of  (T.NIL, T.NIL) => error pos "compare two nil's"
+                            |   _ => ()
+                        else error pos "compare values of different types";
+                        (exp1, exp2)
+                    )
+
+                    fun checkOrderOperands (expty1, expty2, pos) = (
+                        case (#ty expty1, #ty expty2)
+                            of  (T.INT, T.INT) => ()
+                            |   (T.STRING, T.STRING) => ()
+                            |   _ => error pos "take order of non-int/string type";
+                        checkComparisonOperands (expty1, expty2, pos)
+                    )
+
+                    fun checkUnit ({exp, ty}, pos) =
+                        case ty
+                            of  T.UNIT => exp
+                            |   T.BOTTOM => exp
+                            |   _ => (error pos "unit required"; ())
+
+                    fun trexp (A.VarExp var) = trvar var
                     |   trexp A.NilExp = {exp=(), ty=T.NIL}
                     |   trexp (A.IntExp i) = {exp=(), ty=T.INT}
                     |   trexp (A.StringExp (s, pos)) = {exp=(), ty=T.STRING}
                     |   trexp (A.CallExp {func, args, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
-                    |   trexp (A.OpExp {left, oper=A.PlusOp, right, pos}) = (
-                        checkInt (trexp left, pos);
-                        checkInt (trexp right, pos);
-                        {exp=(), ty=T.INT}
-                    )
-                    |   trexp (A.OpExp {left, oper=A.MinusOp, right, pos}) = (
-                        checkInt (trexp left, pos);
-                        checkInt (trexp right, pos);
-                        {exp=(), ty=T.INT}
-                    )
-                    |   trexp (A.OpExp {left, oper=A.TimesOp, right, pos}) = (
-                        checkInt (trexp left, pos);
-                        checkInt (trexp right, pos);
-                        {exp=(), ty=T.INT}
-                    )
-                    |   trexp (A.OpExp {left, oper=A.DivideOp, right, pos}) = (
-                        checkInt (trexp left, pos);
-                        checkInt (trexp right, pos);
-                        {exp=(), ty=T.INT}
-                    )
-                    (* TODO: Comparison operators *)
+                    |   trexp (A.OpExp {left, oper=A.PlusOp, right, pos}) =
+                        let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.MinusOp, right, pos}) =
+                        let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.TimesOp, right, pos}) =
+                        let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.DivideOp, right, pos}) =
+                        let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.EqOp, right, pos}) =
+                        let val (exp1, exp2) = checkComparisonOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.NeqOp, right, pos}) =
+                        let val (exp1, exp2) = checkComparisonOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.LtOp, right, pos}) =
+                        let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.LeOp, right, pos}) =
+                        let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.GtOp, right, pos}) =
+                        let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
+                    |   trexp (A.OpExp {left, oper=A.GeOp, right, pos}) =
+                        let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
+                        in {exp=(), ty=T.INT}
+                        end
                     |   trexp (A.RecordExp {fields, typ, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
                     |   trexp (A.SeqExp expList) =
                         let fun f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end
@@ -78,13 +120,32 @@ struct
                         let val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, decs)
                         in transExp (venv', tenv', inLoop, body)
                         end
-                    |   trexp (A.ArrayExp {typ, size, init, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.ArrayExp {typ, size, init, pos}) =
+                        let val (eleTy, unique) = case S.look (tenv, typ)
+                                of  SOME ty => (
+                                    case ty
+                                        of  T.ARRAY (ty', unique) => (ty' (), unique)
+                                        |   T.BOTTOM => (T.BOTTOM, ref())
+                                        |   _ => (
+                                            error pos ("create array with non-array type " ^ S.name typ);
+                                            (T.BOTTOM, ref ())
+                                        )
+                                )
+                                |   NONE => (unboundTypeError (typ, pos); (T.BOTTOM, ref ()))
+                            val sizeExp = checkInt (trexp size, pos)
+                            val {exp=initExp, ty=initTy} = trexp init
+                        in
+                            if T.isSubtype (initTy, eleTy) orelse T.isBottom eleTy
+                            then ()
+                            else error pos "inconsistent initial value type";
+                            {exp=(), ty=T.ARRAY (fn () => eleTy, unique)}
+                        end
 
                     and trvar (A.SimpleVar (id, pos)) = (
                         case S.look (venv, id)
                             of  SOME (E.VarEntry {ty, forIdx}) => {exp=(), ty=ty}
                             |   NONE => (
-                                error pos ("undefined variable " ^ S.name id);
+                                error pos ("unbound variable " ^ S.name id);
                                 {exp=(), ty=T.BOTTOM}
                         )
                     )
@@ -98,10 +159,10 @@ struct
                             |   _ => (error pos "access field of non-record type"; {exp=(), ty=T.BOTTOM})
                         end
                     |   trvar (A.SubscriptVar (lvalue, exp, pos)) =
-                        let val {exp=lvExp, ty=ty} = trvar lvalue
+                        let val {exp=lvExp, ty=lvTy} = trvar lvalue
                             val idxExp = checkInt (trexp exp, pos)
                         in
-                            case ty
+                            case lvTy
                                 of  T.ARRAY (eleTy, unique) => {exp=(), ty=eleTy ()}
                                 |   T.BOTTOM => {exp=(), ty=T.BOTTOM}
                                 |   _ => (error pos "index non-array type"; {exp=(), ty=T.BOTTOM})
@@ -135,7 +196,7 @@ struct
                             of  SOME (ty, unique) => transTy (name, ty, unique, seen)
                             |   NONE => case S.look(tenv, name)
                                             of  SOME ty => (fn () => ty)
-                                            |   NONE => (error pos ("unbound type " ^ S.name name);
+                                            |   NONE => (unboundTypeError (name, pos);
                                                          fn () => T.BOTTOM)
                     and transTy (name, A.NameTy (typ, pos), unique, seen) =
                         let val seen = S.enter (seen, name, ())
@@ -147,7 +208,7 @@ struct
                     |   transTy (name, A.RecordTy (fieldList), unique, seen
                         ) =
                         let fun buildFields ({name, escape, typ, pos}, l) = (name, getType (typ, pos, seen))::l
-                        in fn () => T.RECORD (foldr buildFields nil fieldList, unique)
+                        in fn () => T.RECORD (foldr buildFields [] fieldList, unique)
                         end
                     |   transTy (name, A.ArrayTy (typ, pos), unique, seen) =
                             (fn () => T.ARRAY (getType (typ, pos, seen), unique))

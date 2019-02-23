@@ -33,14 +33,13 @@ struct
                     )
 
                     fun checkOrderOperands (expty1, expty2, pos) =
-                        let val ty1 = #ty expty1
-                            val ty2 = #ty expty2
-                            fun isString ty = case ty
-                                of  T.STRING => true
+                        let fun hasOrder ty = case ty
+                                of  T.INT => true
+                                |   T.STRING => true
+                                |   T.BOTTOM => true
                                 |   _ => false
                         in
-                            if (T.isSubtype (ty1, T.INT) orelse isString ty1)
-                            andalso (T.isSubtype (ty2, T.INT) orelse isString ty2)
+                            if hasOrder (#ty expty1) andalso hasOrder (#ty expty2)
                             then ()
                             else error pos "take order of non-int/string type";
                         checkComparisonOperands (expty1, expty2, pos)

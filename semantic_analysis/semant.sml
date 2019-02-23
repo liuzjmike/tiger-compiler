@@ -32,13 +32,19 @@ struct
                         (exp1, exp2)
                     )
 
-                    fun checkOrderOperands (expty1, expty2, pos) = (
-                        case (#ty expty1, #ty expty2)
-                            of  (T.INT, T.INT) => ()
-                            |   (T.STRING, T.STRING) => ()
-                            |   _ => error pos "take order of non-int/string type";
+                    fun checkOrderOperands (expty1, expty2, pos) =
+                        let val ty1 = #ty expty1
+                            val ty2 = #ty expty2
+                            fun isString ty = case ty
+                                of  T.STRING => true
+                                |   _ => false
+                        in
+                            if (T.isSubtype (ty1, T.INT) orelse isString ty1)
+                            andalso (T.isSubtype (ty2, T.INT) orelse isString ty2)
+                            then ()
+                            else error pos "take order of non-int/string type";
                         checkComparisonOperands (expty1, expty2, pos)
-                    )
+                        end
 
                     fun checkUnit ({exp, ty}, pos) =
                         case ty
@@ -95,7 +101,7 @@ struct
                         let fun checkFields ([], []) = ()
                             |   checkFields ([], f2::l2) = (
                                 error pos "too many fields in record creation";
-                                map (fn (id, exp, fieldPos) => trexp exp);
+                                map (fn (id, exp, fieldPos) => trexp exp) (f2::l2);
                                 ()
                             )
                             |   checkFields (f1::l1, []) = error pos "insufficient fields in record creation"
@@ -121,6 +127,7 @@ struct
                             )
                             |   NONE => (unboundTypeError (typ, pos); {exp=(), ty=T.RECORD ([], ref ())})
                         end
+                    |   trexp (A.SeqExp []) = {exp=(), ty=T.UNIT}
                     |   trexp (A.SeqExp expList) =
                         let fun f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end
                             |   f ((exp, pos)::l) =
@@ -134,7 +141,7 @@ struct
                         let val {exp=varExp, ty=varTy} = trvar var
                             val {exp=valExp, ty=valTy} = trexp exp
                         in
-                            if T.isSubtype (valTy, varTy)
+                            if canAccept (varTy, valTy)
                             then ()
                             else error pos "assign value of wrong type";
                             {exp=(), ty=T.UNIT}
@@ -195,7 +202,7 @@ struct
                         in
                             if canAccept (eleTy, initTy)
                             then ()
-                            else error pos "inconsistent initial value type";
+                            else error pos "incorrect array initial value type";
                             {exp=(), ty=T.ARRAY (fn () => eleTy, unique)}
                         end
 
@@ -249,23 +256,26 @@ struct
             |   transDec (venv, tenv, A.VarDec {name, escape, typ=NONE, init, pos}) =
                 let val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
                     val varTy = case valTy
-                        of  T.NIL => (error pos "nil value in un-typed variable declaration"; T.BOTTOM)
+                        of  T.NIL => (error pos "nil value in variable declaration not contrained by record type"; T.BOTTOM)
                         |   ty => ty
                 in {venv=S.enter (venv, name, E.VarEntry {ty=varTy, forIdx=false}), tenv=tenv}
                 end
             |   transDec (venv, tenv, A.TypeDec decList) =
                 let val decList = map (fn dec => (dec, ref ())) decList
-                    fun addToEnv f (({name, ty, pos}, unique), t) = (
-                        case S.look (t, name)
-                            of  SOME _ => error pos (
-                                    "duplicate type declaration "
-                                    ^ S.name name
-                                    ^ " in one mutually recursive group"
-                                )
-                            |   NONE => ();
-                        S.enter (t, name, f (name, ty, unique))
+                    fun addToEnv (transform, check) (({name, ty, pos}, unique), t) = (
+                        check (t, name, pos);
+                        S.enter (t, name, transform (name, ty, unique))
                     )
-                    val localTEnv = foldl (addToEnv (fn (name, ty, unique) => (ty, unique))) S.empty decList
+                    val localTEnv = foldl (addToEnv (
+                            fn (name, ty, unique) => (ty, unique),
+                            fn (t, name, pos) => case S.look (t, name)
+                                of  SOME _ => error pos (
+                                        "duplicate type declaration "
+                                        ^ S.name name
+                                        ^ " in one mutually recursive group"
+                                    )
+                                |   NONE => ()
+                        )) S.empty decList
                     fun getType (name, pos, seen) =
                         case S.look(localTEnv, name)
                             of  SOME (ty, unique) => transTy (name, ty, unique, seen)
@@ -289,8 +299,8 @@ struct
                             (fn () => T.ARRAY (getType (typ, pos, seen), unique))
                 in
                     {venv=venv, tenv=foldl (addToEnv (
-                        fn (name, ty, unique) =>
-                            transTy (name, ty, unique, S.empty) ()
+                            fn (name, ty, unique) => transTy (name, ty, unique, S.empty) (),
+                            fn (t, name, pos) => ()
                         )) tenv decList}
                 end
 

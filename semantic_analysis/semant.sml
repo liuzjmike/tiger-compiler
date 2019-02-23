@@ -10,6 +10,7 @@ struct
 
     fun transProg exp =
         let fun unboundTypeError (ty, pos) = error pos ("unbound type " ^ S.name ty)
+
             fun transExp (venv, tenv, inLoop, exp) =
                 let fun checkInt ({exp, ty}, pos) =
                         case ty
@@ -203,7 +204,24 @@ struct
                 end
 
             and transDec (venv, tenv, A.FunctionDec decList) = {venv=venv, tenv=tenv} (* TODO *)
-            |   transDec (venv, tenv, A.VarDec {name, escape, typ, init, pos}) = {venv=venv, tenv=tenv} (* TODO *)
+            |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ', typPos), init, pos}) =
+                let val varTy = case S.look (tenv, typ')
+                        of  SOME ty => ty
+                        |   NONE => (unboundTypeError (typ', typPos); T.BOTTOM)
+                    val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
+                in 
+                    if T.isSubtype (valTy, varTy) orelse T.isBottom varTy
+                    then ()
+                    else error pos "declare variable with wrong initial value type";
+                    {venv=S.enter (venv, name, E.VarEntry {ty=varTy, forIdx=false}), tenv=tenv}
+                end
+            |   transDec (venv, tenv, A.VarDec {name, escape, typ=NONE, init, pos}) =
+                let val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
+                    val varTy = case valTy
+                        of  T.NIL => (error pos "nil value in un-typed variable declaration"; T.BOTTOM)
+                        |   ty => ty
+                in {venv=S.enter (venv, name, E.VarEntry {ty=varTy, forIdx=false}), tenv=tenv}
+                end
             |   transDec (venv, tenv, A.TypeDec decList) =
                 let val decList = map (fn dec => (dec, ref ())) decList
                     fun addToEnv f (({name, ty, pos}, unique), t) = (

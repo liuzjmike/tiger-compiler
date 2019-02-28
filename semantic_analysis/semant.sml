@@ -60,7 +60,31 @@ struct
                     |   trexp A.NilExp = {exp=(), ty=T.NIL}
                     |   trexp (A.IntExp i) = {exp=(), ty=T.INT}
                     |   trexp (A.StringExp (s, pos)) = {exp=(), ty=T.STRING}
-                    |   trexp (A.CallExp {func, args, pos}) = {exp=(), ty=T.BOTTOM} (* TODO *)
+                    |   trexp (A.CallExp {func, args, pos}) = (
+                        case S.look (venv, func)
+                            of  SOME (E.FunEntry {formals, result}) =>
+                                let val actuals = map trexp args
+                                    fun checkArgs ([], []) = ()
+                                    |   checkArgs ([], a2::l2) = error pos "too many arguments"
+                                    |   checkArgs (a1::l1, []) = error pos "insufficient arguments"
+                                    |   checkArgs (t1::l1, {exp,ty=t2}::l2) = (
+                                        if canAccept (t1, t2) then ()
+                                        else error pos "incorrect argument type";
+                                        checkArgs (l1, l2)
+                                    )
+                                in
+                                    checkArgs (formals, actuals);
+                                    {exp=(), ty=result}
+                                end
+                            |   SOME (E.VarEntry _) => (
+                                error pos (S.name func ^ " is not a function");
+                                {exp=(), ty=T.BOTTOM}
+                            )
+                            |   NONE => (
+                                error pos ("unbound function " ^ S.name func);
+                                {exp=(), ty=T.BOTTOM}
+                            )
+                    )
                     |   trexp (A.OpExp {left, oper=A.PlusOp, right, pos}) =
                         let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
                         in {exp=(), ty=T.INT}
@@ -101,36 +125,29 @@ struct
                         let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
                         in {exp=(), ty=T.INT}
                         end
-                    |   trexp (A.RecordExp {fields, typ, pos}) =
-                        let fun checkFields ([], []) = ()
-                            |   checkFields ([], f2::l2) = (
-                                error pos "too many fields in record creation";
-                                map (fn (id, exp, fieldPos) => trexp exp) (f2::l2);
-                                ()
-                            )
-                            |   checkFields (f1::l1, []) = error pos "insufficient fields in record creation"
-                            |   checkFields ((id1, ty1)::l1, (id2, exp, fieldPos)::l2) = (
-                                if id1 = id2 then () else error fieldPos "incorrect field name";
-                                let val {exp=fieldExp, ty=fieldTy} = trexp exp
-                                in if canAccept (ty1 (), fieldTy) then () else error fieldPos "incorrect field type"
-                                end;
-                                checkFields (l1, l2)
-                            )
-                        in case S.look (tenv, typ)
-                            of  SOME ty => (
-                                case ty
-                                of  T.RECORD (fieldList, unique) => (
+                    |   trexp (A.RecordExp {fields, typ, pos}) = (
+                        case S.look (tenv, typ)
+                            of SOME (T.RECORD (fieldList, unique)) =>
+                                let val fields = map (fn (id, exp, pos) => (id, trexp exp, pos)) fields
+                                    fun checkFields ([], []) = ()
+                                    |   checkFields ([], f2::l2) = error pos "too many fields in record creation"
+                                    |   checkFields (f1::l1, []) = error pos "insufficient fields in record creation"
+                                    |   checkFields ((id1, ty1)::l1, (id2, {exp, ty=ty2}, fieldPos)::l2) = (
+                                        if id1 = id2 then () else error fieldPos "incorrect field name";
+                                        if canAccept (ty1 (), ty2) then () else error fieldPos "incorrect field type";
+                                        checkFields (l1, l2)
+                                    )
+                                in
                                     checkFields (fieldList, fields);
                                     {exp=(), ty=T.RECORD (fieldList, unique)}
-                                )
-                                |   T.BOTTOM => {exp=(), ty=T.BOTTOM}
-                                |   _ => (
-                                    error pos "create record with non-record type";
-                                    {exp=(), ty=T.BOTTOM}
-                                )
+                                end
+                            |   SOME T.BOTTOM => {exp=(), ty=T.BOTTOM}
+                            |   SOME _ => (
+                                error pos "create record with non-record type";
+                                {exp=(), ty=T.BOTTOM}
                             )
                             |   NONE => (unboundTypeError (typ, pos); {exp=(), ty=T.BOTTOM})
-                        end
+                    )
                     |   trexp (A.SeqExp []) = {exp=(), ty=T.UNIT}
                     |   trexp (A.SeqExp expList) =
                         let fun f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end

@@ -123,13 +123,13 @@ struct
                                     checkFields (fieldList, fields);
                                     {exp=(), ty=T.RECORD (fieldList, unique)}
                                 )
-                                |   T.BOTTOM => {exp=(), ty=T.RECORD ([], ref ())}
+                                |   T.BOTTOM => {exp=(), ty=T.BOTTOM}
                                 |   _ => (
                                     error pos "create record with non-record type";
-                                    {exp=(), ty=T.RECORD ([], ref ())}
+                                    {exp=(), ty=T.BOTTOM}
                                 )
                             )
-                            |   NONE => (unboundTypeError (typ, pos); {exp=(), ty=T.RECORD ([], ref ())})
+                            |   NONE => (unboundTypeError (typ, pos); {exp=(), ty=T.BOTTOM})
                         end
                     |   trexp (A.SeqExp []) = {exp=(), ty=T.UNIT}
                     |   trexp (A.SeqExp expList) =

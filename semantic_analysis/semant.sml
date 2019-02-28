@@ -12,6 +12,11 @@ struct
         let fun unboundTypeError (ty, pos) = error pos ("unbound type " ^ S.name ty)
                     
             fun canAccept (formal, actual) = T.isSubtype (actual, formal) orelse T.isBottom formal
+                    
+            fun transTy (tenv, typ, pos) =
+                case S.look (tenv, typ)
+                    of  SOME ty => ty
+                    |   NONE => (unboundTypeError (typ, pos); T.BOTTOM)
 
             fun transExp (venv, tenv, inLoop, exp) =
                 let fun checkInt ({exp, ty}, pos) =
@@ -240,11 +245,47 @@ struct
                 in foldl buildEnv {venv=venv, tenv=tenv} decs
                 end
 
-            and transDec (venv, tenv, A.FunctionDec decList) = {venv=venv, tenv=tenv} (* TODO *)
-            |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ', typPos), init, pos}) =
-                let val varTy = case S.look (tenv, typ')
-                        of  SOME ty => ty
-                        |   NONE => (unboundTypeError (typ', typPos); T.BOTTOM)
+            and transDec (venv, tenv, A.FunctionDec decList) = 
+                let fun transparam {name, typ, escape, pos} = {name=name, ty=transTy (tenv, typ, pos)}
+                    fun addFunToEnv ({name, params, result, body, pos}, (venv, localEnv, decList)) =
+                        let val resultTy = case result
+                                of  SOME (typ, pos) => transTy (tenv, typ, pos)
+                                |   NONE => T.UNIT
+                            val params' = map transparam params
+                            val localEnv = case S.look (localEnv, name)
+                                of  SOME () => (
+                                    error pos  (
+                                        "functions of same name "
+                                        ^ S.name name
+                                        ^ " in one mutually recursive group"
+                                    );
+                                    localEnv
+                                    )
+                                |   NONE => S.enter (localEnv, name, ())
+                        in 
+                            (
+                                S.enter (venv, name, E.FunEntry {formals=map #ty params', result=resultTy}),
+                                localEnv,
+                                (name, params', resultTy, body, pos)::decList
+                            )
+                        end
+                    val (venv', localEnv, decList') = foldl addFunToEnv (venv, S.empty, []) decList
+                    val decList' = List.rev decList'
+                    fun enterparam ({name, ty}, venv) = S.enter (venv, name, E.VarEntry {ty=ty, forIdx=false})
+                    fun checkBody (name, params, result, body, pos) =
+                        let val venv'' = foldl enterparam venv' params
+                            val {exp=bodyExp, ty=bodyTy} = transExp (venv'', tenv, false, body)
+                        in
+                            if canAccept (result, bodyTy)
+                            then ()
+                            else error pos "incorrect return type"
+                        end
+                in
+                    map checkBody decList';
+                    {venv=venv', tenv=tenv}
+                end
+            |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}) =
+                let val varTy = transTy (tenv, typ, typPos)
                     val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
                 in 
                     if canAccept (varTy, valTy)
@@ -269,7 +310,7 @@ struct
                             fn (name, ty, unique) => (ty, unique),
                             fn (t, name, pos) => case S.look (t, name)
                                 of  SOME _ => error pos (
-                                        "duplicate type declaration "
+                                        "types of same name "
                                         ^ S.name name
                                         ^ " in one mutually recursive group"
                                     )
@@ -277,28 +318,28 @@ struct
                         )) S.empty decList
                     fun getType (name, pos, seen) =
                         case S.look(localTEnv, name)
-                            of  SOME (ty, unique) => transTy (name, ty, unique, seen)
+                            of  SOME (ty, unique) => transTyDec (name, ty, unique, seen)
                             |   NONE => case S.look(tenv, name)
                                             of  SOME ty => (fn () => ty)
                                             |   NONE => (unboundTypeError (name, pos);
                                                          fn () => T.BOTTOM)
-                    and transTy (name, A.NameTy (typ, pos), unique, seen) =
+                    and transTyDec (name, A.NameTy (typ, pos), unique, seen) =
                         let val seen = S.enter (seen, name, ())
                         in
                             case S.look (seen, typ)
                                 of  SOME _ => (error pos "circular type aliasing"; fn () => T.BOTTOM)
                                 |   NONE => fn () => getType (typ, pos, seen) ()
                         end
-                    |   transTy (name, A.RecordTy (fieldList), unique, seen
+                    |   transTyDec (name, A.RecordTy (fieldList), unique, seen
                         ) =
                         let fun buildFields ({name, escape, typ, pos}, l) = (name, getType (typ, pos, seen))::l
                         in fn () => T.RECORD (foldr buildFields [] fieldList, unique)
                         end
-                    |   transTy (name, A.ArrayTy (typ, pos), unique, seen) =
+                    |   transTyDec (name, A.ArrayTy (typ, pos), unique, seen) =
                             (fn () => T.ARRAY (getType (typ, pos, seen), unique))
                 in
                     {venv=venv, tenv=foldl (addToEnv (
-                            fn (name, ty, unique) => transTy (name, ty, unique, S.empty) (),
+                            fn (name, ty, unique) => transTyDec (name, ty, unique, S.empty) (),
                             fn (t, name, pos) => ()
                         )) tenv decList}
                 end

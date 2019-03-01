@@ -11,5 +11,6 @@ fun test filename =
                 if n < 49 then f (n+1) else ()
             end
     in
-        f 1
+        f 1;
+        TextIO.closeOut output
     end

@@ -56,7 +56,7 @@ struct
                             |   T.BOTTOM => exp
                             |   _ => (error pos "unit required"; ())
 
-                    fun trexp (A.VarExp var) = trvar var
+                    fun trexp (A.VarExp var) = #1 (trvar var)
                     |   trexp A.NilExp = {exp=(), ty=T.NIL}
                     |   trexp (A.IntExp i) = {exp=(), ty=T.INT}
                     |   trexp (A.StringExp (s, pos)) = {exp=(), ty=T.STRING}
@@ -159,11 +159,13 @@ struct
                         in {exp=(), ty=ty}
                         end
                     |   trexp (A.AssignExp {var, exp, pos}) = 
-                        let val {exp=varExp, ty=varTy} = trvar var
+                        let val ({exp=varExp, ty=varTy}, forIdx) = trvar var
                             val {exp=valExp, ty=valTy} = trexp exp
                         in
-                            if canAccept (varTy, valTy)
-                            then ()
+                            if forIdx
+                            then error pos "cannot assign to for-loop index"
+                            else ();
+                            if canAccept (varTy, valTy) then ()
                             else error pos "assign value of wrong type";
                             {exp=(), ty=T.UNIT}
                         end
@@ -229,29 +231,29 @@ struct
 
                     and trvar (A.SimpleVar (id, pos)) = (
                         case S.look (venv, id)
-                            of  SOME (E.VarEntry {ty, forIdx}) => {exp=(), ty=ty}
+                            of  SOME (E.VarEntry {ty, forIdx}) => ({exp=(), ty=ty}, forIdx)
                             |   NONE => (
                                 error pos ("unbound variable " ^ S.name id);
-                                {exp=(), ty=T.BOTTOM}
+                                ({exp=(), ty=T.BOTTOM}, false)
                         )
                     )
                     |   trvar (A.FieldVar (lvalue, id, pos)) =
-                        let val {exp=exp, ty=ty} = trvar lvalue
-                            fun f [] = (error pos ("field " ^ S.name id ^ " does not exist"); {exp=(), ty=T.BOTTOM})
-                            |   f ((id', ty')::l) = if id' = id then {exp=(), ty=ty'()} else f l
+                        let val {exp=exp, ty=ty} = #1 (trvar lvalue)
+                            fun f [] = (error pos ("field " ^ S.name id ^ " does not exist"); ({exp=(), ty=T.BOTTOM}, false))
+                            |   f ((id', ty')::l) = if id' = id then ({exp=(), ty=ty'()}, false) else f l
                         in case ty
                             of  T.RECORD (fieldList, unique) => f fieldList
-                            |   T.BOTTOM => {exp=(), ty=T.BOTTOM}
-                            |   _ => (error pos "access field of non-record type"; {exp=(), ty=T.BOTTOM})
+                            |   T.BOTTOM => ({exp=(), ty=T.BOTTOM}, false)
+                            |   _ => (error pos "access field of non-record type"; ({exp=(), ty=T.BOTTOM}, false))
                         end
                     |   trvar (A.SubscriptVar (lvalue, exp, pos)) =
-                        let val {exp=lvExp, ty=lvTy} = trvar lvalue
+                        let val {exp=lvExp, ty=lvTy} = #1 (trvar lvalue)
                             val idxExp = checkInt (trexp exp, pos)
                         in
                             case lvTy
-                                of  T.ARRAY (eleTy, unique) => {exp=(), ty=eleTy ()}
-                                |   T.BOTTOM => {exp=(), ty=T.BOTTOM}
-                                |   _ => (error pos "index non-array type"; {exp=(), ty=T.BOTTOM})
+                                of  T.ARRAY (eleTy, unique) => ({exp=(), ty=eleTy ()}, false)
+                                |   T.BOTTOM => ({exp=(), ty=T.BOTTOM}, false)
+                                |   _ => (error pos "index non-array type"; ({exp=(), ty=T.BOTTOM}, false))
                         end
                 in
                     trexp exp

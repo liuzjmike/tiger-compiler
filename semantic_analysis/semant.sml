@@ -148,9 +148,9 @@ struct
                         )
                         |   NONE => (unboundTypeError (typ, pos); {exp=(), ty=T.BOTTOM})
                     )
-                    |   trexp (A.SeqExp []) = {exp=(), ty=T.UNIT}
                     |   trexp (A.SeqExp expList) =
-                        let fun f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end
+                        let fun f [] = ([], T.UNIT)
+                            |   f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end
                             |   f ((exp, pos)::l) =
                                 let val (resList, ty) = f l
                                 in ((#exp (trexp exp))::resList, ty)
@@ -232,6 +232,10 @@ struct
                     and trvar (A.SimpleVar (id, pos)) = (
                         case S.look (venv, id)
                         of  SOME (E.VarEntry {ty, forIdx}) => ({exp=(), ty=ty}, forIdx)
+                        |   SOME (E.FunEntry _) => (
+                            error pos (S.name id ^ "is a function, not a variable");
+                            ({exp=(), ty=T.BOTTOM}, false)
+                        )
                         |   NONE => (
                             error pos ("unbound variable " ^ S.name id);
                             ({exp=(), ty=T.BOTTOM}, false)

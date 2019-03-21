@@ -85,7 +85,7 @@ exp: lvalue                             (A.VarExp lvalue)
    | IF exp THEN exp ELSE exp           (A.IfExp{test=exp1, then'=exp2, else'=SOME exp3, pos=IFleft})
    | IF exp THEN exp                    (A.IfExp{test=exp1, then'=exp2, else'=NONE, pos=IFleft})
    | WHILE exp DO exp                   (A.WhileExp{test=exp1, body=exp2, pos=WHILEleft})
-   | FOR ID ASSIGN exp TO exp DO exp    (A.ForExp{var=symbol ID, escape=ref true, lo=exp1, hi=exp2, body=exp3, pos=FORleft})
+   | FOR ID ASSIGN exp TO exp DO exp    (A.ForExp{var=symbol ID, escape=ref false, lo=exp1, hi=exp2, body=exp3, pos=FORleft})
    | LET decs IN expseq_opt END         (A.LetExp{decs=decs, body=expseq_opt, pos=LETleft})
    | BREAK                              (A.BreakExp BREAKleft)
 
@@ -130,7 +130,7 @@ dec: vardec                             (vardec)
    | fundec                             (fundec)
    | tydec                              (tydec)
 
-vardec: VAR ID tyarg_opt ASSIGN exp     (A.VarDec{name=symbol ID, escape=ref true,
+vardec: VAR ID tyarg_opt ASSIGN exp     (A.VarDec{name=symbol ID, escape=ref false,
                                          typ=tyarg_opt, init=exp, pos=VARleft})
 
 fundec: FUNCTION ID LPAREN tyfieldlist_opt RPAREN tyarg_opt EQ exp
@@ -154,4 +154,4 @@ tyfieldlist_opt: tyfieldlist            (tyfieldlist)
 tyfieldlist: tyfield COMMA tyfieldlist  (tyfield::tyfieldlist)
            | tyfield                    (tyfield::nil)
 
-tyfield: ID COLON ID                    ({name=symbol ID1, escape=ref true, typ=symbol ID2, pos=ID1left})
+tyfield: ID COLON ID                    ({name=symbol ID1, escape=ref false, typ=symbol ID2, pos=ID1left})

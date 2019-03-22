@@ -2,6 +2,7 @@ structure MipsFrame : FRAME =
 struct
     datatype access = InFrame of int
                     | InReg of Temp.temp
+    (* TODO: Add prolog instructions and move args to the right place *)
     type frame = {name: Temp.label, formals: access list, nLocal: int ref}
 
     val wordSize = 4 (* 32 bit *)

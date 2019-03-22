@@ -74,6 +74,7 @@ struct
                                 )
                             in
                                 checkArgs (formals, actuals);
+                                (* TODO: Special treatment for more than 4 arguments? *)
                                 {exp=(), ty=result}
                             end
                         |   SOME (E.VarEntry _) => (

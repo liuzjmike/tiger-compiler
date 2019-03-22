@@ -68,5 +68,5 @@ struct
         in 
             foldl trdec env decs
         end
-    fun findEscape(prog: Absyn.exp) = ()
+    fun findEscape(prog) = traverseExp (S.empty, 0, prog)
 end

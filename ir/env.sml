@@ -1,4 +1,4 @@
-structure Env: ENV =
+structure Env : ENV =
 struct
 
     structure S = Symbol
@@ -6,8 +6,11 @@ struct
 
     type access = int
     type ty = T.ty
-    datatype enventry = VarEntry of {ty: ty, forIdx: bool}
-                      | FunEntry of {formals: ty list, result: ty}
+    datatype enventry = VarEntry of {access: Translate.access, ty: ty, forIdx: bool}
+                      | FunEntry of {level: Translate.level,
+                                     label: Temp.label,
+                                     formals: ty list,
+                                     result : ty}
 
     fun addToTable ((k, v), t) = S.enter (t, S.symbol k, v)
 
@@ -16,16 +19,66 @@ struct
         [("int", T.INT), ("string", T.STRING)]
     val base_venv =
         foldl addToTable S.empty [
-            ("print", FunEntry {formals=[T.STRING], result=T.UNIT}),
-            ("flush", FunEntry {formals=[], result=T.UNIT}),
-            ("getchar", FunEntry {formals=[], result=T.STRING}),
-            ("ord", FunEntry {formals=[T.STRING], result=T.INT}),
-            ("chr", FunEntry {formals=[T.INT], result=T.STRING}),
-            ("size", FunEntry {formals=[T.STRING], result=T.INT}),
-            ("substring", FunEntry {formals=[T.STRING, T.INT, T.INT], result=T.STRING}),
-            ("concat", FunEntry {formals=[T.STRING, T.STRING], result=T.STRING}),
-            ("not", FunEntry {formals=[T.INT], result=T.INT}),
-            ("exit", FunEntry {formals=[T.INT], result=T.UNIT})
+            ("print", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.STRING],
+                result=T.UNIT
+            }),
+            ("flush", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[],
+                result=T.UNIT
+            }),
+            ("getchar", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[],
+                result=T.STRING
+            }),
+            ("ord", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.STRING],
+                result=T.INT
+            }),
+            ("chr", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.INT],
+                result=T.STRING
+            }),
+            ("size", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.STRING],
+                result=T.INT
+            }),
+            ("substring", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.STRING, T.INT, T.INT],
+                result=T.STRING
+            }),
+            ("concat", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.STRING, T.STRING],
+                result=T.STRING
+            }),
+            ("not", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.INT],
+                result=T.INT
+            }),
+            ("exit", FunEntry {
+                level=Translate.outermost,
+                label=Temp.newlabel (),
+                formals=[T.INT],
+                result=T.UNIT
+            })
         ]
 
 end

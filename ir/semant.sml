@@ -1,5 +1,5 @@
 structure Semant:
-    sig val transProg: Absyn.exp -> Translate.exp end =
+    sig val transProg : Absyn.exp -> unit end =
 struct
 
     structure A = Absyn
@@ -10,15 +10,15 @@ struct
 
     fun transProg exp =
         let fun unboundTypeError (ty, pos) = error pos ("unbound type " ^ S.name ty)
-                    
+
             fun canAccept (formal, actual) = T.isSubtype (actual, formal) orelse T.isBottom formal
-                    
+
             fun transTy (tenv, typ, pos) =
                 case S.look (tenv, typ)
                 of  SOME ty => ty
                 |   NONE => (unboundTypeError (typ, pos); T.BOTTOM)
 
-            fun transExp (venv, tenv, inLoop, exp) =
+            fun transExp (venv, tenv, inLoop, exp, level) =
                 let fun checkInt ({exp, ty}, pos) =
                         case ty
                         of  T.INT => exp
@@ -27,7 +27,7 @@ struct
 
                     fun checkArithmeticOperands (expty1, expty2, pos) =
                         (checkInt (expty1, pos), checkInt (expty2, pos))
-                    
+
                     fun checkComparisonOperands ({exp=exp1, ty=ty1}, {exp=exp2, ty=ty2}, pos) = (
                         if T.isSubtype (ty1, ty2) orelse T.isSubtype (ty2, ty1)
                         then case (ty1, ty2)
@@ -62,7 +62,7 @@ struct
                     |   trexp (A.StringExp (s, pos)) = {exp=(), ty=T.STRING}
                     |   trexp (A.CallExp {func, args, pos}) = (
                         case S.look (venv, func)
-                        of  SOME (E.FunEntry {formals, result}) =>
+                        of  SOME (E.FunEntry {level, label, formals, result}) =>
                             let val actuals = map trexp args
                                 fun checkArgs ([], []) = ()
                                 |   checkArgs ([], a2::l2) = error pos "too many arguments"
@@ -158,7 +158,7 @@ struct
                             val (resList, ty) = f expList
                         in {exp=(), ty=ty}
                         end
-                    |   trexp (A.AssignExp {var, exp, pos}) = 
+                    |   trexp (A.AssignExp {var, exp, pos}) =
                         let val ({exp=varExp, ty=varTy}, forIdx) = trvar var
                             val {exp=valExp, ty=valTy} = trexp exp
                         in
@@ -190,14 +190,17 @@ struct
                         end
                     |   trexp (A.WhileExp {test, body, pos}) =
                         let val testExp = checkInt (trexp test, pos)
-                            val bodyExp = checkUnit (transExp (venv, tenv, true, body), pos)
+                            val bodyExp = checkUnit (transExp (venv, tenv, true, body, level), pos)
                         in {exp=(), ty=T.UNIT}
                         end
                     |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) =
                         let val loExp = checkInt (trexp lo, pos)
                             val hiExp = checkInt (trexp hi, pos)
-                            val venv' = S.enter (venv, var, E.VarEntry {ty=T.INT, forIdx=true})
-                            val bodyExp = checkUnit (transExp (venv', tenv, true, body), pos)
+                            val venv' = S.enter (venv, var, E.VarEntry {
+                                access=Translate.allocLocal level (!escape),
+                                ty=T.INT, forIdx=true
+                            })
+                            val bodyExp = checkUnit (transExp (venv', tenv, true, body, level), pos)
                         in {exp=(), ty=T.UNIT}
                         end
                     |   trexp (A.BreakExp pos) =
@@ -205,8 +208,8 @@ struct
                         then {exp=(), ty=T.BOTTOM}
                         else (error pos "break outside of loop"; {exp=(), ty=T.BOTTOM})
                     |   trexp (A.LetExp {decs, body, pos}) =
-                        let val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, decs)
-                        in transExp (venv', tenv', inLoop, body)
+                        let val {venv=venv', tenv=tenv'} = transDecs (venv, tenv, decs, level)
+                        in transExp (venv', tenv', inLoop, body, level)
                         end
                     |   trexp (A.ArrayExp {typ, size, init, pos}) =
                         let val (eleTy, unique) = case S.look (tenv, typ)
@@ -231,7 +234,7 @@ struct
 
                     and trvar (A.SimpleVar (id, pos)) = (
                         case S.look (venv, id)
-                        of  SOME (E.VarEntry {ty, forIdx}) => ({exp=(), ty=ty}, forIdx)
+                        of  SOME (E.VarEntry {access, ty, forIdx}) => ({exp=(), ty=ty}, forIdx)
                         |   SOME (E.FunEntry _) => (
                             error pos (S.name id ^ "is a function, not a variable");
                             ({exp=(), ty=T.BOTTOM}, false)
@@ -262,13 +265,154 @@ struct
                     trexp exp
                 end
 
-            and transDecs (venv, tenv, decs) =
-                let fun buildEnv (dec, {venv, tenv}) = transDec (venv, tenv, dec)
+            and transDecs (venv, tenv, decs, level) =
+                let fun transDec (A.FunctionDec decList) =
+                        let fun transparam {name, typ, escape, pos} = {
+                                name=name,
+                                ty=transTy (tenv, typ, pos),
+                                escape=(!escape)
+                            }
+                            fun addFunToEnv ({name, params, result, body, pos}, (venv, localEnv, decList)) =
+                                let val resultTy = case result
+                                        of  SOME (typ, pos) => transTy (tenv, typ, pos)
+                                        |   NONE => T.UNIT
+                                    val params' = map transparam params
+                                    val localEnv = case S.look (localEnv, name)
+                                        of  SOME () => (
+                                            error pos  (
+                                                "functions of same name "
+                                                ^ S.name name
+                                                ^ " in one mutually recursive group"
+                                            );
+                                            localEnv
+                                            )
+                                        |   NONE => S.enter (localEnv, name, ())
+                                    val label = Temp.newlabel ()
+                                    val funLevel = Translate.newLevel {
+                                        parent=level,
+                                        name=label,
+                                        formals=map (fn x => !(#escape x)) params
+                                    }
+                                in
+                                    (
+                                        S.enter (
+                                            venv, name,
+                                            E.FunEntry {
+                                                level=funLevel, label=label,
+                                                formals=map #ty params', result=resultTy
+                                            }),
+                                        localEnv,
+                                        (name, params', resultTy, body, pos, funLevel)::decList
+                                    )
+                                end
+                            val (venv', localEnv, decList') = foldl addFunToEnv (venv, S.empty, []) decList
+                            val decList' = List.rev decList'
+                            fun checkBody (name, params, result, body, pos, funLevel) =
+                                let fun enterparam ({name, ty, escape}, venv) = S.enter (
+                                        venv, name,
+                                        E.VarEntry {
+                                            access=Translate.allocLocal funLevel escape,
+                                            ty=ty, forIdx=false
+                                    })
+                                    val venv'' = foldl enterparam venv' params
+                                    val {exp=bodyExp, ty=bodyTy} = transExp (venv'', tenv, false, body, funLevel)
+                                in
+                                    if canAccept (result, bodyTy)
+                                    then ()
+                                    else error pos "incorrect return type"
+                                end
+                        in
+                            map checkBody decList';
+                            {venv=venv', tenv=tenv}
+                        end
+                    |   transDec (A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}) =
+                        let val varTy = transTy (tenv, typ, typPos)
+                            val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
+                        in
+                            if canAccept (varTy, valTy)
+                            then ()
+                            else error pos "declare variable with wrong initial value type";
+                            {
+                                venv=S.enter (
+                                    venv, name,
+                                    E.VarEntry {
+                                        access=Translate.allocLocal level (!escape),
+                                        ty=varTy, forIdx=false
+                                    }),
+                                tenv=tenv
+                            }
+                        end
+                    |   transDec (A.VarDec {name, escape, typ=NONE, init, pos}) =
+                        let val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
+                            val varTy = case valTy
+                                of  T.NIL => (error pos "nil value in variable declaration not contrained by record type"; T.BOTTOM)
+                                |   ty => ty
+                        in {
+                            venv=S.enter (
+                                venv, name,
+                                E.VarEntry {
+                                    access=Translate.allocLocal level (!escape),
+                                    ty=varTy, forIdx=false
+                                }
+                            ),
+                            tenv=tenv
+                        }
+                        end
+                    |   transDec (A.TypeDec decList) =
+                        let val decList = map (fn dec => (dec, ref ())) decList
+                            fun addToEnv (transform, check) (({name, ty, pos}, unique), t) = (
+                                check (t, name, pos);
+                                S.enter (t, name, transform (name, ty, unique))
+                            )
+                            val localTEnv = foldl (addToEnv (
+                                    fn (name, ty, unique) => (ty, unique),
+                                    fn (t, name, pos) => case S.look (t, name)
+                                        of  SOME _ => error pos (
+                                                "types of same name "
+                                                ^ S.name name
+                                                ^ " in one mutually recursive group"
+                                            )
+                                        |   NONE => ()
+                                )) S.empty decList
+                            fun getType (name, pos, seen) =
+                                case S.look(localTEnv, name)
+                                of  SOME (ty, unique) => transTyDec (name, ty, unique, seen)
+                                |   NONE => case S.look(tenv, name)
+                                            of  SOME ty => (fn () => ty)
+                                            |   NONE => (
+                                                unboundTypeError (name, pos);
+                                                fn () => T.BOTTOM
+                                            )
+                            and transTyDec (name, A.NameTy (typ, pos), unique, seen) =
+                                let val seen = S.enter (seen, name, ())
+                                in case S.look (seen, typ)
+                                    of  SOME _ => (error pos "circular type aliasing"; fn () => T.BOTTOM)
+                                    |   NONE => fn () => getType (typ, pos, seen) ()
+                                end
+                            |   transTyDec (name, A.RecordTy (fieldList), unique, seen
+                                ) =
+                                let fun buildFields ({name, escape, typ, pos}, l) = (name, getType (typ, pos, seen))::l
+                                in fn () => T.RECORD (foldr buildFields [] fieldList, unique)
+                                end
+                            |   transTyDec (name, A.ArrayTy (typ, pos), unique, seen) =
+                                    (fn () => T.ARRAY (getType (typ, pos, seen), unique))
+                        in
+                            {venv=venv, tenv=foldl (addToEnv (
+                                    fn (name, ty, unique) => transTyDec (name, ty, unique, S.empty) (),
+                                    fn (t, name, pos) => ()
+                                )) tenv decList}
+                        end
+
+                    fun buildEnv (dec, {venv, tenv}) = transDec (dec)
                 in foldl buildEnv {venv=venv, tenv=tenv} decs
                 end
 
-            and transDec (venv, tenv, A.FunctionDec decList) = 
-                let fun transparam {name, typ, escape, pos} = {name=name, ty=transTy (tenv, typ, pos)}
+            and transDec (venv, tenv, A.FunctionDec decList, level) =
+                let fun transparam {name, typ, escape, pos} = {
+                        name=name,
+                        ty=transTy (tenv, typ, pos),
+                        escape=(!escape)
+                    }
                     fun addFunToEnv ({name, params, result, body, pos}, (venv, localEnv, decList)) =
                         let val resultTy = case result
                                 of  SOME (typ, pos) => transTy (tenv, typ, pos)
@@ -284,19 +428,35 @@ struct
                                     localEnv
                                     )
                                 |   NONE => S.enter (localEnv, name, ())
-                        in 
+                            val label = Temp.newlabel ()
+                            val fun_level = Translate.newLevel {
+                                parent=level,
+                                name=label,
+                                formals=map (fn x => !(#escape x)) params
+                            }
+                        in
                             (
-                                S.enter (venv, name, E.FunEntry {formals=map #ty params', result=resultTy}),
+                                S.enter (
+                                    venv, name,
+                                    E.FunEntry {
+                                        level=fun_level, label=label,
+                                        formals=map #ty params', result=resultTy
+                                    }),
                                 localEnv,
-                                (name, params', resultTy, body, pos)::decList
+                                (name, params', resultTy, body, pos, fun_level)::decList
                             )
                         end
                     val (venv', localEnv, decList') = foldl addFunToEnv (venv, S.empty, []) decList
                     val decList' = List.rev decList'
-                    fun enterparam ({name, ty}, venv) = S.enter (venv, name, E.VarEntry {ty=ty, forIdx=false})
-                    fun checkBody (name, params, result, body, pos) =
-                        let val venv'' = foldl enterparam venv' params
-                            val {exp=bodyExp, ty=bodyTy} = transExp (venv'', tenv, false, body)
+                    fun checkBody (name, params, result, body, pos, fun_level) =
+                        let fun enterparam ({name, ty, escape}, venv) = S.enter (
+                                venv, name,
+                                E.VarEntry {
+                                    access=Translate.allocLocal fun_level escape,
+                                    ty=ty, forIdx=false
+                            })
+                            val venv'' = foldl enterparam venv' params
+                            val {exp=bodyExp, ty=bodyTy} = transExp (venv'', tenv, false, body, fun_level)
                         in
                             if canAccept (result, bodyTy)
                             then ()
@@ -306,23 +466,40 @@ struct
                     map checkBody decList';
                     {venv=venv', tenv=tenv}
                 end
-            |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}) =
+            |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}, level) =
                 let val varTy = transTy (tenv, typ, typPos)
-                    val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
-                in 
+                    val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
+                in
                     if canAccept (varTy, valTy)
                     then ()
                     else error pos "declare variable with wrong initial value type";
-                    {venv=S.enter (venv, name, E.VarEntry {ty=varTy, forIdx=false}), tenv=tenv}
+                    {
+                        venv=S.enter (
+                            venv, name,
+                            E.VarEntry {
+                                access=Translate.allocLocal level (!escape),
+                                ty=varTy, forIdx=false
+                            }),
+                        tenv=tenv
+                    }
                 end
-            |   transDec (venv, tenv, A.VarDec {name, escape, typ=NONE, init, pos}) =
-                let val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init)
+            |   transDec (venv, tenv, A.VarDec {name, escape, typ=NONE, init, pos}, level) =
+                let val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
                     val varTy = case valTy
                         of  T.NIL => (error pos "nil value in variable declaration not contrained by record type"; T.BOTTOM)
                         |   ty => ty
-                in {venv=S.enter (venv, name, E.VarEntry {ty=varTy, forIdx=false}), tenv=tenv}
+                in {
+                    venv=S.enter (
+                        venv, name,
+                        E.VarEntry {
+                            access=Translate.allocLocal level (!escape),
+                            ty=varTy, forIdx=false
+                        }
+                    ),
+                    tenv=tenv
+                }
                 end
-            |   transDec (venv, tenv, A.TypeDec decList) =
+            |   transDec (venv, tenv, A.TypeDec decList, level) =
                 let val decList = map (fn dec => (dec, ref ())) decList
                     fun addToEnv (transform, check) (({name, ty, pos}, unique), t) = (
                         check (t, name, pos);
@@ -368,7 +545,8 @@ struct
                 end
 
         in
-            #exp (transExp (E.base_venv, E.base_tenv, false, exp))
+            FindEscape.findEscape exp;
+            #exp (transExp (E.base_venv, E.base_tenv, false, exp, Translate.outermost))
         end
 
 end

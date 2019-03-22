@@ -1,4 +1,6 @@
 structure Main =
 struct
-    fun main filename = Semant.transProg (Parse.parse filename)
+    structure MipsSemant = Semant (Translate (MipsFrame))
+
+    fun main filename = MipsSemant.transProg (Parse.parse filename)
 end

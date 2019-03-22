@@ -39,5 +39,3 @@ struct
                   | STRING of Temp.label * string
 
 end
-
-structure Frame : FRAME = MipsFrame

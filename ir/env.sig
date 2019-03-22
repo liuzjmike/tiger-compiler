@@ -1,9 +1,10 @@
 signature ENV =
 sig
+    type level
     type access
     type ty
-    datatype enventry = VarEntry of {access: Translate.access, ty: ty, forIdx: bool}
-                      | FunEntry of {level: Translate.level,
+    datatype enventry = VarEntry of {access: access, ty: ty, forIdx: bool}
+                      | FunEntry of {level: level,
                                      label: Temp.label,
                                      formals: ty list,
                                      result : ty}

@@ -1,9 +1,9 @@
-structure Semant:
+functor Semant (Translate : TRANSLATE) :
     sig val transProg : Absyn.exp -> unit end =
 struct
 
     structure A = Absyn
-    structure E = Env
+    structure E = Env (Translate)
     structure S = Symbol
     structure T = Types
     val error = ErrorMsg.error

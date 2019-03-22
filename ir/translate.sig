@@ -1,4 +1,5 @@
 signature TRANSLATE = sig
+    type exp
     type level
     type access (* not the same as Frame.access *)
     val outermost: level

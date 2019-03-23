@@ -41,16 +41,19 @@ struct
     |   branch (Ex e) = (fn (t, f) => T.CJUMP (e, t, f))
     |   branch (Nx s) = ErrorMsg.impossible "convert statement into conditional branch"
 
+    fun unLevel (Level level) = level
+    |   unLevel Outermost = ErrorMsg.impossible "access the outermost level"
+
+    fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  (T.LVALUE frameAddr)
+
     fun simpleVar ((defLevel, access), curLevel) =
         let val defId = case defLevel
             of  Level {parent, frame, id} => id
             |   Outermost => ErrorMsg.impossible "variable defined in the outermost level"
-            fun unLevel (Level level) = level
-            |   unLevel Outermost = ErrorMsg.impossible "access the outermost level"
             fun g ({parent, frame, id}, frameAddr) =
                 if id = defId
                 then F.exp access (T.LVALUE frameAddr)
-                else g (unLevel parent, F.exp (List.hd (F.formals frame)) (T.LVALUE frameAddr))
+                else g (unLevel parent, staticLink frame frameAddr)
         in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
         end
 
@@ -59,6 +62,18 @@ struct
     fun nilExp () = T.MEM (T.CONST 0)
 
     fun intExp i = T.CONST i
+
+    fun callExp (args, caller, callee, label) =
+        let fun sameLevel ({parent=p1, frame=f1, id=i1}, {parent=p2, frame=f2, id=i2}) = i1 = i2
+            val calleeParent = #id (unLevel (#parent (unLevel callee)))
+            fun f ({parent, frame, id}, frameAddr) =
+                if id = calleeParent
+                then frameAddr
+                else f (unLevel parent, staticLink frame frameAddr)
+            val sl = f (unLevel caller, T.TEMP F.FP)
+        in
+            T.CALL (T.NAME label, (T.LVALUE sl)::args)
+        end
 
     fun plusExp (left, right) = Ex (T.BINOP (T.PLUS, left, right))
 

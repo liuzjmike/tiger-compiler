@@ -101,7 +101,6 @@ struct
                 let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
                 in {exp=(), ty=T.INT}
                 end
-            (* TODO: Special treatment for comparing strings *)
             |   trexp (A.OpExp {left, oper=A.EqOp, right, pos}) =
                 let val (exp1, exp2) = checkComparisonOperands (trexp left, trexp right, pos)
                 in {exp=(), ty=T.INT}
@@ -197,9 +196,9 @@ struct
             |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) =
                 let val loExp = checkInt (trexp lo, pos)
                     val hiExp = checkInt (trexp hi, pos)
+                    val access = Translate.allocLocal level (!escape)
                     val venv' = S.enter (venv, var, E.VarEntry {
-                        access=Translate.allocLocal level (!escape),
-                        ty=T.INT, forIdx=true
+                        access=access, ty=T.INT, forIdx=true
                     })
                     val bodyExp = checkUnit (transExp (venv', tenv, true, body, level), pos)
                 in {exp=(), ty=T.UNIT}
@@ -247,16 +246,16 @@ struct
             )
             |   trvar (A.FieldVar (lvalue, id, pos)) =
                 let val {exp=exp, ty=ty} = #1 (trvar lvalue)
-                    fun f [] = (error pos ("field " ^ S.name id ^ " does not exist"); ({exp=(), ty=T.BOTTOM}, false))
-                    |   f ((id', ty')::l) = if id' = id then ({exp=(), ty=ty'()}, false) else f l
+                    fun f ([], i) = (error pos ("field " ^ S.name id ^ " does not exist"); ({exp=(), ty=T.BOTTOM}, false))
+                    |   f ((id', ty')::l, i) = if id' = id then ({exp=(), ty=ty'()}, false) else f (l, i+1)
                 in case ty
-                    of  T.RECORD (fieldList, unique) => f fieldList
+                    of  T.RECORD (fieldList, unique) => f (fieldList, 0)
                     |   T.BOTTOM => ({exp=(), ty=T.BOTTOM}, false)
                     |   _ => (error pos "access field of non-record type"; ({exp=(), ty=T.BOTTOM}, false))
                 end
-            |   trvar (A.SubscriptVar (lvalue, exp, pos)) =
+            |   trvar (A.SubscriptVar (lvalue, idx, pos)) =
                 let val {exp=lvExp, ty=lvTy} = #1 (trvar lvalue)
-                    val idxExp = checkInt (trexp exp, pos)
+                    val idxExp = checkInt (trexp idx, pos)
                 in case lvTy
                     of  T.ARRAY (eleTy, unique) => ({exp=(), ty=eleTy ()}, false)
                     |   T.BOTTOM => ({exp=(), ty=T.BOTTOM}, false)

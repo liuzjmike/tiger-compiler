@@ -10,12 +10,7 @@ struct
     val wordSize = 4 (* 32 bit *)
     val nArgReg = 4
 
-    fun newLocal true count =
-        let val res = InFrame (~wordSize * !count)
-        in
-            count := !count + 1;
-            res
-        end
+    fun newLocal true count = (count := !count + 1; InFrame (~wordSize * !count))
     |   newLocal false count = InReg (Temp.newtemp ())
 
     fun newFrame {name, formals} =

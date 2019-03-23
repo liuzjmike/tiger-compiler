@@ -34,6 +34,8 @@ struct
     fun unNx (Nx s) = s
     |   unNx (Ex e) = T.EXP e
 
+    (* During translation into assembly, if `e` is T.RELOP it should be munched directly;
+    otherwise it should be compared to 0 *)
     fun branch (Ex (T.CONST 0)) = (fn (t, f) => T.JUMP (T.NAME f, [f]))
     |   branch (Ex (T.CONST c)) = (fn (t, f) => T.JUMP (T.NAME t, [t]))
     |   branch (Ex e) = (fn (t, f) => T.CJUMP (e, t, f))
@@ -52,7 +54,7 @@ struct
         in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
         end
 
-    (* fun fieldVar () *)
+    fun subscriptVar (a, i) = Ex (T.LVALUE (T.MEM (T.BINOP (T.PLUS, a, T.BINOP (T.MUL, i, T.CONST 4)))))
 
     fun nilExp () = T.MEM (T.CONST 0)
 
@@ -66,6 +68,7 @@ struct
 
     fun divExp (left, right) = Ex (T.BINOP (T.DIV, left, right))
 
+    (* TODO: Special treatment for comparing strings *)
     fun eqExp (left, right) = Ex (T.RELOP (T.EQ, left, right))
 
     fun neExp (left, right) = Ex (T.RELOP (T.NE, left, right))
@@ -119,6 +122,46 @@ struct
                     T.LABEL endLabel
                 ],
                 T.LVALUE (T.TEMP ans)))
+        end
+
+    fun whileExp (test, body) =
+        let val b = unNx body
+            val start = Temp.newlabel ()
+            val end' = Temp.newlabel ()
+            val testBranch = branch test (start, end')
+        in
+            (
+                Nx (T.seq [
+                    testBranch,
+                    T.LABEL start,
+                    b,
+                    testBranch,
+                    T.LABEL end'
+                ]),
+                end'
+            )
+        end
+
+    fun forExp ((level, access), lo, hi, body) =
+        let val i = F.exp access (T.LVALUE (T.TEMP F.FP))
+            val hiReg = T.TEMP (Temp.newtemp ())
+            val l = unEx lo
+            val h = unEx hi
+            val b = unNx body
+            val beforeLabel = Temp.newlabel ()
+            val bodyLabel = Temp.newlabel ()
+            val afterLabel = Temp.newlabel ()
+        in
+            Nx (T.seq [
+                T.MOVE (i, l),
+                T.MOVE (hiReg, h),
+                T.CJUMP (T.RELOP (T.LE, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
+                T.LABEL beforeLabel,
+                T.MOVE (i, T.BINOP (T.PLUS, T.LVALUE i, T.CONST 1)),
+                T.LABEL bodyLabel,
+                b,
+                T.CJUMP (T.RELOP (T.LT, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
+                T.LABEL afterLabel])
         end
 
 end

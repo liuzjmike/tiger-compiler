@@ -4,6 +4,8 @@ struct
     structure S = Symbol
     structure T = Types
 
+    structure Translate = Translate
+
     type level = Translate.level
     type access = Translate.access
     type ty = T.ty

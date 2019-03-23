@@ -101,6 +101,7 @@ struct
                 let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
                 in {exp=(), ty=T.INT}
                 end
+            (* TODO: Special treatment for comparing strings *)
             |   trexp (A.OpExp {left, oper=A.EqOp, right, pos}) =
                 let val (exp1, exp2) = checkComparisonOperands (trexp left, trexp right, pos)
                 in {exp=(), ty=T.INT}

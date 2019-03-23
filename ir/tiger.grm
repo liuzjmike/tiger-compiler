@@ -38,8 +38,8 @@ fun makeVar (id, pos) = A.SimpleVar(symbol id, pos)
 %noshift EOF
 
 %right ASSIGN DO THEN ELSE OF
-%left OR
-%left AND
+%right OR
+%right AND
 %nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left TIMES DIVIDE

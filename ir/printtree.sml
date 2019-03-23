@@ -19,14 +19,14 @@ fun printtree (outstream, s0) =
 				exp(a,d+1); sayln ","; exp(b,d+1); sayln ",";
 				indent(d+1); say(Symbol.name t); 
 				say ","; say (Symbol.name f); say ")")
-    | stm(T.MOVE(a,b),d) = (indent d; sayln "MOVE("; exp(a,d+1); sayln ",";
+    | stm(T.MOVE(a,b),d) = (indent d; sayln "MOVE("; exp(T.LVALUE a,d+1); sayln ",";
 			    exp(b,d+1); say ")")
     | stm(T.EXP e, d) = (indent d; sayln "EXP("; exp(e,d+1); say ")")
 
   and exp(T.BINOP(p,a,b),d) = (indent d; say "BINOP("; binop p; sayln ",";
 			       exp(a,d+1); sayln ","; exp(b,d+1); say ")")
-    | exp(T.MEM(e),d) = (indent d; sayln "MEM("; exp(e,d+1); say ")")
-    | exp(T.TEMP t, d) = (indent d; say "TEMP t"; say(Int.toString t))
+    | exp(T.LVALUE(T.MEM(e)),d) = (indent d; sayln "MEM("; exp(e,d+1); say ")")
+    | exp(T.LVALUE(T.TEMP t), d) = (indent d; say "TEMP t"; say(Int.toString t))
     | exp(T.ESEQ(s,e),d) = (indent d; sayln "ESEQ("; stm(s,d+1); sayln ",";
 			  exp(e,d+1); say ")")
     | exp(T.NAME lab, d) = (indent d; say "NAME "; say (Symbol.name lab))

@@ -1,11 +1,11 @@
-structure Printtree : 
+structure Printtree :
      sig val printtree : TextIO.outstream * Tree.stm -> unit end =
 struct
 
   structure T = Tree
 fun printtree (outstream, s0) =
  let fun say s =  TextIO.output(outstream,s)
-  fun sayln s= (say s; say "\n") 
+  fun sayln s= (say s; say "\n")
 
   fun indent 0 = ()
     | indent i = (say " "; indent(i-1))
@@ -14,16 +14,17 @@ fun printtree (outstream, s0) =
           (indent d; sayln "SEQ("; stm(a,d+1); sayln ","; stm(b,d+1); say ")")
     | stm(T.LABEL lab, d) = (indent d; say "LABEL "; say (Symbol.name lab))
     | stm(T.JUMP (e,_), d) =  (indent d; sayln "JUMP("; exp(e,d+1); say ")")
-    | stm(T.CJUMP(r,a,b,t,f),d) = (indent d; say "CJUMP(";
-				relop r; sayln ",";
-				exp(a,d+1); sayln ","; exp(b,d+1); sayln ",";
-				indent(d+1); say(Symbol.name t); 
+    | stm(T.CJUMP(e,t,f),d) = (indent d; sayln "CJUMP(";
+				exp(e,d+1); sayln ",";
+				indent(d+1); say(Symbol.name t);
 				say ","; say (Symbol.name f); say ")")
     | stm(T.MOVE(a,b),d) = (indent d; sayln "MOVE("; exp(T.LVALUE a,d+1); sayln ",";
 			    exp(b,d+1); say ")")
     | stm(T.EXP e, d) = (indent d; sayln "EXP("; exp(e,d+1); say ")")
 
   and exp(T.BINOP(p,a,b),d) = (indent d; say "BINOP("; binop p; sayln ",";
+			       exp(a,d+1); sayln ","; exp(b,d+1); say ")")
+    | exp(T.RELOP(r,a,b),d) = (indent d; say "RELOP("; relop r; sayln ",";
 			       exp(a,d+1); sayln ","; exp(b,d+1); say ")")
     | exp(T.LVALUE(T.MEM(e)),d) = (indent d; sayln "MEM("; exp(e,d+1); say ")")
     | exp(T.LVALUE(T.TEMP t), d) = (indent d; say "TEMP t"; say(Int.toString t))

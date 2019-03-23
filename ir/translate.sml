@@ -4,7 +4,6 @@ struct
 
     datatype exp = Ex of T.exp
                  | Nx of T.stm
-                 | Cx of Temp.label * Temp.label -> T.stm
     datatype level = Level of {parent: level, frame: F.frame, id: unit ref}
                    | Outermost
     type access = level * F.access
@@ -31,33 +30,14 @@ struct
 
     fun unEx (Ex e) = e
     |   unEx (Nx s) = T.ESEQ (s, T.CONST 0)
-    |   unEx (Cx genstm) =
-        let val r = Temp.newtemp ()
-            val t = Temp.newlabel ()
-            val f = Temp.newlabel ()
-        in
-            T.ESEQ (T.seq [
-                    T.MOVE (T.TEMP r, T.CONST 1) ,
-                    genstm (t, f),
-                    T.LABEL f,
-                    T.MOVE (T.TEMP r, T.CONST 0 ),
-                    T. LABEL t
-                ] ,
-                T.LVALUE (T.TEMP r))
-        end
 
     fun unNx (Nx s) = s
     |   unNx (Ex e) = T.EXP e
-    |   unNx (Cx f) =
-        let val l = Temp.newlabel ()
-        in T.SEQ (f(l, l), T.LABEL l)
-        end
 
-    fun unCx (Cx f) = f
-    |   unCx (Ex (T.CONST 1)) = (fn (t, f) => T.JUMP (T.NAME t, [t]))
-    |   unCx (Ex (T.CONST 0)) = (fn (t, f) => T.JUMP (T.NAME f, [f]))
-    |   unCx (Ex e) = (fn (t, f) => T.CJUMP (T.NE, e, T.CONST 0, t, f))
-    |   unCx (Nx s) = ErrorMsg.impossible "convert statement into conditional"
+    fun branch (Ex (T.CONST 0)) = (fn (t, f) => T.JUMP (T.NAME f, [f]))
+    |   branch (Ex (T.CONST c)) = (fn (t, f) => T.JUMP (T.NAME t, [t]))
+    |   branch (Ex e) = (fn (t, f) => T.CJUMP (e, t, f))
+    |   branch (Nx s) = ErrorMsg.impossible "convert statement into conditional branch"
 
     fun simpleVar ((defLevel, access), curLevel) =
         let val defId = case defLevel
@@ -86,20 +66,27 @@ struct
 
     fun divExp (left, right) = Ex (T.BINOP (T.DIV, left, right))
 
-    fun eqExp (left, right) = Cx (fn (t, f) => T.CJUMP (T.EQ, left, right, t, f))
+    fun eqExp (left, right) = Ex (T.RELOP (T.EQ, left, right))
 
-    fun neExp (left, right) = Cx (fn (t, f) => T.CJUMP (T.NE, left, right, t, f))
+    fun neExp (left, right) = Ex (T.RELOP (T.NE, left, right))
 
-    fun ltExp (left, right) = Cx (fn (t, f) => T.CJUMP (T.LT, left, right, t, f))
+    fun ltExp (left, right) = Ex (T.RELOP (T.LT, left, right))
 
-    fun leExp (left, right) = Cx (fn (t, f) => T.CJUMP (T.LE, left, right, t, f))
+    fun leExp (left, right) = Ex (T.RELOP (T.LE, left, right))
 
-    fun gtExp (left, right) = Cx (fn (t, f) => T.CJUMP (T.GT, left, right, t, f))
+    fun gtExp (left, right) = Ex (T.RELOP (T.GT, left, right))
 
-    fun geExp (left, right) = Cx (fn (t, f) => T.CJUMP (T.GE, left, right, t, f))
+    fun geExp (left, right) = Ex (T.RELOP (T.GE, left, right))
+
+    fun seqExp expList =
+        let fun f [] = T.CONST 0
+            |   f [exp] = unEx exp
+            |   f (exp::l) = T.ESEQ (unNx exp, seqExp l)
+        in f expList
+        end
 
     fun ifThenExp (test, then') =
-        let val c = unCx test
+        let val c = branch test
             val t = unNx then'
             val trueLabel = Temp.newlabel ()
             val endLabel = Temp.newlabel ()
@@ -113,7 +100,7 @@ struct
         end
 
     fun ifThenElseExp (test, then', else') =
-        let val c = unCx test
+        let val c = branch test
             val t = unEx then'
             val f = unEx else'
             val trueLabel = Temp.newlabel ()

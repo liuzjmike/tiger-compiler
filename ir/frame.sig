@@ -9,7 +9,7 @@ signature FRAME = sig
 
     val FP: Temp.temp
     val wordSize: int
-    (* val exp: access -> Tree.exp -> Tree.exp *)
+    val exp: access -> Tree.exp -> Tree.exp
 
     val RV: Temp.temp
     (* val externalCall: string * Tree.exp list -> Tree.exp

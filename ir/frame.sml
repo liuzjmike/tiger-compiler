@@ -1,5 +1,7 @@
 structure MipsFrame : FRAME =
 struct
+    structure T = Tree
+
     datatype access = InFrame of int
                     | InReg of Temp.temp
     (* TODO: Add prolog instructions and move args to the right place *)
@@ -9,9 +11,9 @@ struct
     val nArgReg = 4
 
     fun newLocal true count =
-        let val res = InFrame (!count)
+        let val res = InFrame (~wordSize * !count)
         in
-            count := !count + 1; (* FIXME: may want to increment by a different number such as wordSize *)
+            count := !count + 1;
             res
         end
     |   newLocal false count = InReg (Temp.newtemp ())
@@ -29,8 +31,11 @@ struct
     fun allocLocal {name, formals, nLocal} escape = newLocal escape nLocal
 
     val FP = Temp.newtemp ()
+
+    fun exp (InReg r) frameAddr = T.TEMP r
+    |   exp (InFrame k) frameAddr = T.MEM (T.BINOP (T.PLUS, frameAddr, T.CONST k))
+
     val RV = Temp.newtemp ()
-    (* val exp: access -> Tree.exp -> Tree.exp *)
 
     (* val externalCall: string * Tree.exp list -> Tree.exp
     val procEntryExit1: frame * Tree.stm -> Tree.stm *)

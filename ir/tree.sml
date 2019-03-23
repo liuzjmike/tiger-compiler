@@ -24,4 +24,8 @@ struct
   and relop = EQ | NE | LT | GT | LE | GE
             | ULT | ULE | UGT | UGE
 
+  fun seq [] = ErrorMsg.impossible "build statement from empty statement list"
+    | seq [stm] = stm
+    | seq (stm::l) = SEQ (stm, seq l)
+
 end

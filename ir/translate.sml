@@ -69,9 +69,11 @@ struct
         in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
         end
 
-    fun subscriptVar (a, i) = Ex (T.LVALUE (T.MEM (T.BINOP (T.PLUS, unEx a, T.BINOP (T.MUL, unEx i, T.CONST 4)))))
+    fun fieldVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.CONST (i * 4))))
 
-    fun nilExp () = Ex (T.LVALUE (T.MEM (T.CONST 0)))
+    fun subscriptVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.BINOP (T.MUL, unEx i, T.CONST 4))))
+
+    fun nilExp () = Ex (T.CONST 0)
 
     fun intExp i = Ex (T.CONST i)
 
@@ -117,14 +119,14 @@ struct
 
     fun recordExp fields =
         let val a = T.TEMP (Temp.newtemp ())
-            val extCall = F.externalCall ("malloc", [T.CONST (List.length fields)])
+            val extCall = F.externalCall ("malloc", [T.CONST ((List.length fields) * F.wordSize)])
             fun f ([], k) = []
             |   f (field::l, k) =
-                let val moveVal = T.MOVE (T.MEM (T.BINOP (T.PLUS, T.LVALUE a, T.CONST k)), unEx field)
+                let val moveVal = T.MOVE (T.mem (T.LVALUE a, T.CONST k), unEx field)
                 in moveVal::(f (l, k+F.wordSize))
                 end
         in
-            Ex (T.ESEQ (T.seq ((T.MOVE (a, extCall)::(f (fields, 0)))), T.LVALUE a))
+            Ex (T.ESEQ (T.seq (T.MOVE (a, extCall) :: (f (fields, 0))), T.LVALUE a))
         end
 
     fun seqExp expList =
@@ -173,25 +175,21 @@ struct
                 T.LVALUE (T.TEMP ans)))
         end
 
-    fun whileExp (test, body) =
+    fun whileExp (test, body, breakLabel) =
         let val b = unNx body
             val beforeLabel = Temp.newlabel ()
-            val afterLabel = Temp.newlabel ()
-            val testBranch = branch test (beforeLabel, afterLabel)
+            val testBranch = branch test (beforeLabel, breakLabel)
         in
-            (
-                Nx (T.seq [
-                    testBranch,
-                    T.LABEL beforeLabel,
-                    b,
-                    testBranch,
-                    T.LABEL afterLabel
-                ]),
-                afterLabel
-            )
+            Nx (T.seq [
+                testBranch,
+                T.LABEL beforeLabel,
+                b,
+                testBranch,
+                T.LABEL breakLabel
+            ])
         end
 
-    fun forExp ((level, access), lo, hi, body) =
+    fun forExp ((level, access), lo, hi, body, breakLabel) =
         let val i = F.exp access (T.LVALUE (T.TEMP F.FP))
             val hiReg = T.TEMP (Temp.newtemp ())
             val l = unEx lo
@@ -199,24 +197,23 @@ struct
             val b = unNx body
             val beforeLabel = Temp.newlabel ()
             val bodyLabel = Temp.newlabel ()
-            val afterLabel = Temp.newlabel ()
         in
-            (
-                Nx (T.seq [
-                    T.MOVE (i, l),
-                    T.MOVE (hiReg, h),
-                    T.CJUMP (T.RELOP (T.LE, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
-                    T.LABEL beforeLabel,
-                    T.MOVE (i, T.BINOP (T.PLUS, T.LVALUE i, T.CONST 1)),
-                    T.LABEL bodyLabel,
-                    b,
-                    T.CJUMP (T.RELOP (T.LT, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
-                    T.LABEL afterLabel]),
-                afterLabel
-            )
+            Nx (T.seq [
+                T.MOVE (i, l),
+                T.MOVE (hiReg, h),
+                T.CJUMP (T.RELOP (T.LE, T.LVALUE i, T.LVALUE hiReg), bodyLabel, breakLabel),
+                T.LABEL beforeLabel,
+                T.MOVE (i, T.BINOP (T.PLUS, T.LVALUE i, T.CONST 1)),
+                T.LABEL bodyLabel,
+                b,
+                T.CJUMP (T.RELOP (T.LT, T.LVALUE i, T.LVALUE hiReg), bodyLabel, breakLabel),
+                T.LABEL breakLabel])
         end
 
-    fun breakExp afterLabel = Nx (T.JUMP (T.NAME afterLabel, [afterLabel]))
+    fun breakExp label = Nx (T.JUMP (T.NAME label, [label]))
+
+    fun letExp ([], body) = body
+    |   letExp (varDecs, body) = Ex (T.ESEQ (T.seq (map unNx varDecs), unEx body))
 
     fun arrayExp (size, init) =
         let val a = T.TEMP (Temp.newtemp ())

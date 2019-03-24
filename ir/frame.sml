@@ -29,8 +29,7 @@ struct
 
 
     fun exp (InReg r) frameAddr = T.TEMP r
-    |   exp (InFrame k) frameAddr = T.MEM (T.BINOP (T.PLUS, frameAddr, T.CONST k))
-
+    |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)
 
     (* TODO: Special treatment calls with more than 4 arguments *)
     fun procEntryExit1 (frame, body) = body

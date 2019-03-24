@@ -14,6 +14,7 @@ signature TRANSLATE = sig
     val getResult: unit -> frag list
 
     val simpleVar: access * level -> exp
+    val fieldVar: exp * int -> exp
     val subscriptVar: exp * exp -> exp
     val nilExp: unit -> exp
     val intExp: int -> exp
@@ -34,9 +35,10 @@ signature TRANSLATE = sig
     val assignExp: exp * exp -> exp
     val ifThenExp: exp * exp -> exp
     val ifThenElseExp: exp * exp * exp -> exp
-    val whileExp: exp * exp -> exp * Temp.label
-    val forExp: access * exp * exp * exp -> exp * Temp.label
+    val whileExp: exp * exp * Temp.label -> exp
+    val forExp: access * exp * exp * exp * Temp.label -> exp
     val breakExp: Temp.label -> exp
+    val letExp: exp list * exp -> exp
     val arrayExp: exp * exp -> exp
     val varDec: access * exp -> exp
 end

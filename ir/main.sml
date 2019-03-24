@@ -5,7 +5,7 @@ struct
     fun main filename =
         let val ast = Parse.parse filename
         in
-            FindEscape.findescape ast;
+            FindEscape.findEscape ast;
             MipsSemant.transProg ast
         end
 

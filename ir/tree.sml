@@ -30,5 +30,7 @@ struct
   fun seq [] = ErrorMsg.impossible "build statement from empty statement list"
     | seq [stm] = stm
     | seq (stm::l) = SEQ (stm, seq l)
+  
+  fun mem (a, offset) = MEM (BINOP (PLUS, a, offset))
 
 end

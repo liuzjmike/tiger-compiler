@@ -7,6 +7,7 @@ struct
     datatype level = Level of {parent: level, frame: F.frame, id: unit ref}
                    | Outermost
     type access = level * F.access
+    type frag = F.frag
 
     val outermost = Outermost
 
@@ -46,6 +47,15 @@ struct
     fun unLevel (Level level) = level
     |   unLevel Outermost = ErrorMsg.impossible "access the outermost level"
 
+    fun procEntryExit {level, body} =
+        let val frame = #frame (unLevel level)
+            val body = F.procEntryExit1 (frame, T.MOVE (T.TEMP F.RV, unEx body))
+            val frag = F.PROC {body=body, frame=frame}
+        in fragList := frag::(!fragList)
+        end
+
+    fun getResult () = !fragList
+
     fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  (T.LVALUE frameAddr)
 
     fun simpleVar ((defLevel, access), curLevel) =
@@ -59,17 +69,17 @@ struct
         in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
         end
 
-    fun subscriptVar (a, i) = Ex (T.LVALUE (T.MEM (T.BINOP (T.PLUS, a, T.BINOP (T.MUL, i, T.CONST 4)))))
+    fun subscriptVar (a, i) = Ex (T.LVALUE (T.MEM (T.BINOP (T.PLUS, unEx a, T.BINOP (T.MUL, unEx i, T.CONST 4)))))
 
-    fun nilExp () = T.MEM (T.CONST 0)
+    fun nilExp () = Ex (T.LVALUE (T.MEM (T.CONST 0)))
 
-    fun intExp i = T.CONST i
+    fun intExp i = Ex (T.CONST i)
 
     fun stringExp string =
         let val label = Temp.newlabel ()
         in
             fragList := (F.STRING (label, string))::(!fragList);
-            T.NAME label
+            Ex (T.NAME label)
         end
 
     fun callExp (args, caller, callee, label) =
@@ -81,36 +91,36 @@ struct
                 else f (unLevel parent, staticLink frame frameAddr)
             val sl = f (unLevel caller, T.TEMP F.FP)
         in
-            T.CALL (T.NAME label, (T.LVALUE sl)::args)
+            Ex (T.CALL (T.NAME label, (T.LVALUE sl)::(map unEx args)))
         end
 
-    fun plusExp (left, right) = Ex (T.BINOP (T.PLUS, left, right))
+    fun plusExp (left, right) = Ex (T.BINOP (T.PLUS, unEx left, unEx right))
 
-    fun minusExp (left, right) = Ex (T.BINOP (T.MINUS, left, right))
+    fun minusExp (left, right) = Ex (T.BINOP (T.MINUS, unEx left, unEx right))
 
-    fun mulExp (left, right) = Ex (T.BINOP (T.MUL, left, right))
+    fun mulExp (left, right) = Ex (T.BINOP (T.MUL, unEx left, unEx right))
 
-    fun divExp (left, right) = Ex (T.BINOP (T.DIV, left, right))
+    fun divExp (left, right) = Ex (T.BINOP (T.DIV, unEx left, unEx right))
 
     (* TODO: Special treatment for comparing strings *)
-    fun eqExp (left, right) = Ex (T.RELOP (T.EQ, left, right))
+    fun eqExp (left, right) = Ex (T.RELOP (T.EQ, unEx left, unEx right))
 
-    fun neExp (left, right) = Ex (T.RELOP (T.NE, left, right))
+    fun neExp (left, right) = Ex (T.RELOP (T.NE, unEx left, unEx right))
 
-    fun ltExp (left, right) = Ex (T.RELOP (T.LT, left, right))
+    fun ltExp (left, right) = Ex (T.RELOP (T.LT, unEx left, unEx right))
 
-    fun leExp (left, right) = Ex (T.RELOP (T.LE, left, right))
+    fun leExp (left, right) = Ex (T.RELOP (T.LE, unEx left, unEx right))
 
-    fun gtExp (left, right) = Ex (T.RELOP (T.GT, left, right))
+    fun gtExp (left, right) = Ex (T.RELOP (T.GT, unEx left, unEx right))
 
-    fun geExp (left, right) = Ex (T.RELOP (T.GE, left, right))
+    fun geExp (left, right) = Ex (T.RELOP (T.GE, unEx left, unEx right))
 
     fun recordExp fields =
         let val a = T.TEMP (Temp.newtemp ())
             val extCall = F.externalCall ("malloc", [T.CONST (List.length fields)])
             fun f ([], k) = []
             |   f (field::l, k) =
-                let val moveVal = T.MOVE (T.MEM (T.BINOP (T.PLUS, T.LVALUE a, T.CONST k)), field)
+                let val moveVal = T.MOVE (T.MEM (T.BINOP (T.PLUS, T.LVALUE a, T.CONST k)), unEx field)
                 in moveVal::(f (l, k+F.wordSize))
                 end
         in
@@ -120,11 +130,11 @@ struct
     fun seqExp expList =
         let fun f [] = T.CONST 0
             |   f [exp] = unEx exp
-            |   f (exp::l) = T.ESEQ (unNx exp, seqExp l)
-        in f expList
+            |   f (exp::l) = T.ESEQ (unNx exp, f l)
+        in Ex (f expList)
         end
 
-    fun assignExp (Ex (T.LVALUE lvalue), value) = Nx (T.MOVE (lvalue, value))
+    fun assignExp (Ex (T.LVALUE lvalue), value) = Nx (T.MOVE (lvalue, unEx value))
     |   assignExp (var, value) = ErrorMsg.impossible "invalid assignment"
 
     fun ifThenExp (test, then') =
@@ -210,22 +220,11 @@ struct
 
     fun arrayExp (size, init) =
         let val a = T.TEMP (Temp.newtemp ())
-            val extCall = F.externalCall ("initArray", [size, init])
+            val extCall = F.externalCall ("initArray", [unEx size, unEx init])
         in
             Ex (T.ESEQ (T.MOVE (a, extCall), T.LVALUE a))
         end
 
-    fun varDec (access, value) = Nx (T.MOVE (F.exp access (T.LVALUE (T.TEMP F.FP)), unEx value))
-
-    fun procEntryExit {level, body} =
-        let val frame = #frame (unLevel level)
-            val body = F.procEntryExit1 (frame, T.MOVE (T.TEMP F.RV, unEx body))
-            val frag = F.PROC {body=body, frame=frame}
-        in fragList := frag::(!fragList)
-        end
-
-    structure Frame = F
-
-    fun getResult () = !fragList
+    fun varDec ((level, access), value) = Nx (T.MOVE (F.exp access (T.LVALUE (T.TEMP F.FP)), unEx value))
 
 end

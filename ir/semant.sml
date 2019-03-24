@@ -1,5 +1,5 @@
 functor Semant (Translate : TRANSLATE) :
-    sig val transProg : Absyn.exp -> unit end =
+    sig val transProg : Absyn.exp -> Translate.frag list end =
 struct
 
     structure A = Absyn
@@ -412,8 +412,9 @@ struct
 
     fun transProg exp =
         let val level = Translate.newLevel {parent=Translate.outermost, name=Temp.namedlabel "tig-main", formals=[]}
+            val {exp, ty} = transExp (E.base_venv, E.base_tenv, false, exp, level)
         in
-            FindEscape.findEscape exp;
-            #exp (transExp (E.base_venv, E.base_tenv, false, exp, level))
+            Translate.procEntryExit {level=level, body=exp};
+            Translate.getResult ()
         end
 end

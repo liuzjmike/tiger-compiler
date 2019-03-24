@@ -2,12 +2,15 @@ structure MipsFrame : FRAME =
 struct
     structure T = Tree
 
+    val FP = Temp.newtemp ()
+    val RV = Temp.newtemp ()
+    val wordSize = 4 (* 32 bit *)
+
+    fun externalCall (f, args) = T.CALL (T.NAME (Temp.namedlabel f), args)
+
     datatype access = InFrame of int
                     | InReg of Temp.temp
     type frame = {name: Temp.label, formals: access list, nLocal: int ref}
-
-    val wordSize = 4 (* 32 bit *)
-    val nArgReg = 4
 
     fun newLocal true count = (count := !count + 1; InFrame (~wordSize * !count))
     |   newLocal false count = InReg (Temp.newtemp ())
@@ -24,14 +27,10 @@ struct
 
     fun allocLocal {name, formals, nLocal} escape = newLocal escape nLocal
 
-    val FP = Temp.newtemp ()
 
     fun exp (InReg r) frameAddr = T.TEMP r
     |   exp (InFrame k) frameAddr = T.MEM (T.BINOP (T.PLUS, frameAddr, T.CONST k))
 
-    val RV = Temp.newtemp ()
-
-    fun externalCall (f, args) = T.CALL (T.NAME (Temp.namedlabel f), args)
 
     (* TODO: Special treatment calls with more than 4 arguments *)
     fun procEntryExit1 (frame, body) = body

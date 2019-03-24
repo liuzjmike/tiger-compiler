@@ -73,7 +73,6 @@ struct
                         )
                     in
                         checkArgs (formals, actuals);
-                        (* TODO: Special treatment for more than 4 arguments? *)
                         {exp=(), ty=result}
                     end
                 |   SOME (E.VarEntry _) => (
@@ -327,6 +326,7 @@ struct
                 end
             |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}) =
                 let val varTy = transTy (tenv, typ, typPos)
+                    val access = Translate.allocLocal level (!escape)
                     val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
                 in
                     if canAccept (varTy, valTy)
@@ -336,14 +336,15 @@ struct
                         venv=S.enter (
                             venv, name,
                             E.VarEntry {
-                                access=Translate.allocLocal level (!escape),
+                                access=access,
                                 ty=varTy, forIdx=false
                             }),
                         tenv=tenv
                     }
                 end
             |   transDec (venv, tenv, A.VarDec {name, escape, typ=NONE, init, pos}) =
-                let val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
+                let val access = Translate.allocLocal level (!escape)
+                    val {exp=valExp, ty=valTy} = transExp (venv, tenv, false, init, level)
                     val varTy = case valTy
                         of  T.NIL => (error pos "nil value in variable declaration not contrained by record type"; T.BOTTOM)
                         |   ty => ty
@@ -351,7 +352,7 @@ struct
                     venv=S.enter (
                         venv, name,
                         E.VarEntry {
-                            access=Translate.allocLocal level (!escape),
+                            access=access,
                             ty=varTy, forIdx=false
                         }
                     ),
@@ -409,8 +410,10 @@ struct
         in foldl buildEnv {venv=venv, tenv=tenv} decs
         end
 
-    fun transProg exp = (
-        FindEscape.findEscape exp;
-        #exp (transExp (E.base_venv, E.base_tenv, false, exp, Translate.outermost))
-    )
+    fun transProg exp =
+        let val level = Translate.newLevel {parent=Translate.outermost, name=Temp.namedlabel "tig-main", formals=[]}
+        in
+            FindEscape.findEscape exp;
+            #exp (transExp (E.base_venv, E.base_tenv, false, exp, level))
+        end
 end

@@ -28,7 +28,6 @@ sig
             | ULT | ULE | UGT | UGE
 
   val seq: stm list -> stm
-  (* TODO: Implement notRel, commute *)
   (* val notRel : relop -> relop
   val commute: relop -> relop *)
 end

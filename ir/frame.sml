@@ -4,7 +4,6 @@ struct
 
     datatype access = InFrame of int
                     | InReg of Temp.temp
-    (* TODO: Add prolog instructions and move args to the right place *)
     type frame = {name: Temp.label, formals: access list, nLocal: int ref}
 
     val wordSize = 4 (* 32 bit *)
@@ -32,8 +31,10 @@ struct
 
     val RV = Temp.newtemp ()
 
-    (* val externalCall: string * Tree.exp list -> Tree.exp
-    val procEntryExit1: frame * Tree.stm -> Tree.stm *)
+    fun externalCall (f, args) = T.CALL (T.NAME (Temp.namedlabel f), args)
+
+    (* TODO: Special treatment calls with more than 4 arguments *)
+    fun procEntryExit1 (frame, body) = body
 
     datatype frag = PROC of {body: Tree.stm, frame: frame}
                   | STRING of Temp.label * string

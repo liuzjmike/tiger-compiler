@@ -10,6 +10,8 @@ struct
 
     val outermost = Outermost
 
+    val fragList: F.frag list ref = ref []
+
     fun newLevel {parent, name, formals} = Level {
         parent=parent,
         frame=F.newFrame {name=name, formals=true::formals},
@@ -63,6 +65,13 @@ struct
 
     fun intExp i = T.CONST i
 
+    fun stringExp string =
+        let val label = Temp.newlabel ()
+        in
+            fragList := (F.STRING (label, string))::(!fragList);
+            T.NAME label
+        end
+
     fun callExp (args, caller, callee, label) =
         let fun sameLevel ({parent=p1, frame=f1, id=i1}, {parent=p2, frame=f2, id=i2}) = i1 = i2
             val calleeParent = #id (unLevel (#parent (unLevel callee)))
@@ -96,12 +105,27 @@ struct
 
     fun geExp (left, right) = Ex (T.RELOP (T.GE, left, right))
 
+    fun recordExp fields =
+        let val a = T.TEMP (Temp.newtemp ())
+            val extCall = F.externalCall ("malloc", [T.CONST (List.length fields)])
+            fun f ([], k) = []
+            |   f (field::l, k) =
+                let val moveVal = T.MOVE (T.MEM (T.BINOP (T.PLUS, T.LVALUE a, T.CONST k)), field)
+                in moveVal::(f (l, k+F.wordSize))
+                end
+        in
+            Ex (T.ESEQ (T.seq ((T.MOVE (a, extCall)::(f (fields, 0)))), T.LVALUE a))
+        end
+
     fun seqExp expList =
         let fun f [] = T.CONST 0
             |   f [exp] = unEx exp
             |   f (exp::l) = T.ESEQ (unNx exp, seqExp l)
         in f expList
         end
+
+    fun assignExp (Ex (T.LVALUE lvalue), value) = Nx (T.MOVE (lvalue, value))
+    |   assignExp (var, value) = ErrorMsg.impossible "invalid assignment"
 
     fun ifThenExp (test, then') =
         let val c = branch test
@@ -141,19 +165,19 @@ struct
 
     fun whileExp (test, body) =
         let val b = unNx body
-            val start = Temp.newlabel ()
-            val end' = Temp.newlabel ()
-            val testBranch = branch test (start, end')
+            val beforeLabel = Temp.newlabel ()
+            val afterLabel = Temp.newlabel ()
+            val testBranch = branch test (beforeLabel, afterLabel)
         in
             (
                 Nx (T.seq [
                     testBranch,
-                    T.LABEL start,
+                    T.LABEL beforeLabel,
                     b,
                     testBranch,
-                    T.LABEL end'
+                    T.LABEL afterLabel
                 ]),
-                end'
+                afterLabel
             )
         end
 
@@ -167,16 +191,41 @@ struct
             val bodyLabel = Temp.newlabel ()
             val afterLabel = Temp.newlabel ()
         in
-            Nx (T.seq [
-                T.MOVE (i, l),
-                T.MOVE (hiReg, h),
-                T.CJUMP (T.RELOP (T.LE, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
-                T.LABEL beforeLabel,
-                T.MOVE (i, T.BINOP (T.PLUS, T.LVALUE i, T.CONST 1)),
-                T.LABEL bodyLabel,
-                b,
-                T.CJUMP (T.RELOP (T.LT, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
-                T.LABEL afterLabel])
+            (
+                Nx (T.seq [
+                    T.MOVE (i, l),
+                    T.MOVE (hiReg, h),
+                    T.CJUMP (T.RELOP (T.LE, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
+                    T.LABEL beforeLabel,
+                    T.MOVE (i, T.BINOP (T.PLUS, T.LVALUE i, T.CONST 1)),
+                    T.LABEL bodyLabel,
+                    b,
+                    T.CJUMP (T.RELOP (T.LT, T.LVALUE i, T.LVALUE hiReg), bodyLabel, afterLabel),
+                    T.LABEL afterLabel]),
+                afterLabel
+            )
         end
+
+    fun breakExp afterLabel = Nx (T.JUMP (T.NAME afterLabel, [afterLabel]))
+
+    fun arrayExp (size, init) =
+        let val a = T.TEMP (Temp.newtemp ())
+            val extCall = F.externalCall ("initArray", [size, init])
+        in
+            Ex (T.ESEQ (T.MOVE (a, extCall), T.LVALUE a))
+        end
+
+    fun varDec (access, value) = Nx (T.MOVE (F.exp access (T.LVALUE (T.TEMP F.FP)), unEx value))
+
+    fun procEntryExit {level, body} =
+        let val frame = #frame (unLevel level)
+            val body = F.procEntryExit1 (frame, T.MOVE (T.TEMP F.RV, unEx body))
+            val frag = F.PROC {body=body, frame=frame}
+        in fragList := frag::(!fragList)
+        end
+
+    structure Frame = F
+
+    fun getResult () = !fragList
 
 end

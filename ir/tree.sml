@@ -7,19 +7,17 @@ struct
                | LABEL of label
                | JUMP of exp * label list
                | CJUMP of exp * label * label
-               | MOVE of lvalue * exp
+               | MOVE of exp * exp
                | EXP of exp
 
   and exp = BINOP of binop * exp * exp
           | RELOP of relop * exp * exp
-          | LVALUE of lvalue
+          | MEM of exp
+          | TEMP of Temp.temp
           | ESEQ of stm * exp
           | NAME of label
           | CONST of int
           | CALL of exp * exp list
-
-  and lvalue = MEM of exp
-             | TEMP of Temp.temp
 
   and binop = PLUS | MINUS | MUL | DIV
             | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR

@@ -58,7 +58,7 @@ struct
 
     fun getResult () = !fragList
 
-    fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  (T.LVALUE frameAddr)
+    fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  frameAddr
 
     fun nilExp () = Ex (T.CONST 0)
 
@@ -80,7 +80,7 @@ struct
                 else f (unLevel parent, staticLink frame frameAddr)
             val sl = f (unLevel caller, T.TEMP F.FP)
         in
-            Ex (T.CALL (T.NAME label, (T.LVALUE sl)::(map unEx args)))
+            Ex (T.CALL (T.NAME label, sl::(map unEx args)))
         end
 
     fun plusExp (left, right) = Ex (T.BINOP (T.PLUS, unEx left, unEx right))
@@ -132,11 +132,11 @@ struct
             val extCall = F.externalCall ("malloc", [T.CONST ((List.length fields) * F.wordSize)])
             fun f ([], k) = []
             |   f (field::l, k) =
-                let val moveVal = T.MOVE (T.mem (T.LVALUE a, T.CONST k), unEx field)
+                let val moveVal = T.MOVE (T.mem (a, T.CONST k), unEx field)
                 in moveVal::(f (l, k+F.wordSize))
                 end
         in
-            Ex (T.ESEQ (T.seq (T.MOVE (a, extCall) :: (f (fields, 0))), T.LVALUE a))
+            Ex (T.ESEQ (T.seq (T.MOVE (a, extCall) :: (f (fields, 0))), a))
         end
 
     fun seqExp expList =
@@ -146,8 +146,7 @@ struct
         in Ex (f expList)
         end
 
-    fun assignExp (Ex (T.LVALUE lvalue), value) = Nx (T.MOVE (lvalue, unEx value))
-    |   assignExp (var, value) = Ex (T.CONST 0)
+    fun assignExp (lvalue, value) = Nx (T.MOVE (unEx lvalue, unEx value))
 
     fun ifThenExp (test, then') =
         let val c = branch test
@@ -182,7 +181,7 @@ struct
                     T.MOVE (T.TEMP ans, f),
                     T.LABEL endLabel
                 ],
-                T.LVALUE (T.TEMP ans)))
+                T.TEMP ans))
         end
 
     fun whileExp (test, body, breakLabel) =
@@ -200,7 +199,7 @@ struct
         end
 
     fun forExp ((level, access), lo, hi, body, breakLabel) =
-        let val i = F.exp access (T.LVALUE (T.TEMP F.FP))
+        let val i = F.exp access (T.TEMP F.FP)
             val hiReg = T.TEMP (Temp.newtemp ())
             val l = unEx lo
             val h = unEx hi
@@ -211,12 +210,12 @@ struct
             Nx (T.seq [
                 T.MOVE (i, l),
                 T.MOVE (hiReg, h),
-                T.CJUMP (T.RELOP (T.LE, T.LVALUE i, T.LVALUE hiReg), bodyLabel, breakLabel),
+                T.CJUMP (T.RELOP (T.LE, i, hiReg), bodyLabel, breakLabel),
                 T.LABEL beforeLabel,
-                T.MOVE (i, T.BINOP (T.PLUS, T.LVALUE i, T.CONST 1)),
+                T.MOVE (i, T.BINOP (T.PLUS, i, T.CONST 1)),
                 T.LABEL bodyLabel,
                 b,
-                T.CJUMP (T.RELOP (T.LT, T.LVALUE i, T.LVALUE hiReg), bodyLabel, breakLabel),
+                T.CJUMP (T.RELOP (T.LT, i, hiReg), bodyLabel, breakLabel),
                 T.LABEL breakLabel])
         end
 
@@ -233,9 +232,9 @@ struct
             |   Outermost => ErrorMsg.impossible "variable defined in the outermost level"
             fun g ({parent, frame, id}, frameAddr) =
                 if id = defId
-                then F.exp access (T.LVALUE frameAddr)
+                then F.exp access frameAddr
                 else g (unLevel parent, staticLink frame frameAddr)
-        in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
+        in Ex (g (unLevel curLevel, T.TEMP F.FP))
         end
 
     fun fieldVar (a, i) = 
@@ -244,13 +243,13 @@ struct
             ifThenElseExp (
                 Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
                 Ex (F.externalCall ("nilPointer", [])),
-                Ex (T.LVALUE (T.mem (addr, T.CONST (i * F.wordSize))))
+                Ex (T.mem (addr, T.CONST (i * F.wordSize)))
             )
         end
 
     fun subscriptVar (a, i) = 
         let val addr = unEx a
-            val bound = T.LVALUE (T.mem (addr, T.CONST (~F.wordSize)))
+            val bound = T.mem (addr, T.CONST (~F.wordSize))
             val idx = unEx i
         in
             ifThenElseExp (
@@ -259,11 +258,11 @@ struct
                     Ex (T.RELOP (T.LT, idx, bound)),
                     Ex (T.CONST 0)
                 ),
-                Ex (T.LVALUE (T.mem (addr, T.BINOP (T.MUL, idx, T.CONST 4)))),
+                Ex (T.mem (addr, T.BINOP (T.MUL, idx, T.CONST 4))),
                 Ex (F.externalCall ("indexOutOfBound", [idx, bound]))
             )
         end
 
-    fun varDec ((level, access), value) = Nx (T.MOVE (F.exp access (T.LVALUE (T.TEMP F.FP)), unEx value))
+    fun varDec ((level, access), value) = Nx (T.MOVE (F.exp access (T.TEMP F.FP), unEx value))
 
 end

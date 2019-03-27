@@ -51,7 +51,7 @@ struct
 
         fun reorder ((e as T.CALL _ )::rest) =
             let val t = Temp.newtemp()
-            in reorder(T.ESEQ(T.MOVE(T.TEMP t, e), T.LVALUE(T.TEMP t)) :: rest)
+            in reorder(T.ESEQ(T.MOVE(T.TEMP t, e), T.TEMP t) :: rest)
             end
           | reorder (a::rest) =
             let
@@ -62,7 +62,7 @@ struct
               then (stms % stms',e::el)
               else 
                 let val t = Temp.newtemp()
-                in (stms % T.MOVE(T.TEMP t, e) % stms', T.LVALUE(T.TEMP t) :: el)
+                in (stms % T.MOVE(T.TEMP t, e) % stms', T.TEMP t :: el)
                 end
             end
           | reorder nil = (nop,nil)
@@ -89,6 +89,8 @@ struct
             reorder_stm([b],fn[b]=>T.MOVE(T.TEMP t,b))
           | do_stm(T.MOVE(T.MEM e,b)) = 
             reorder_stm([e,b],fn[e,b]=>T.MOVE(T.MEM e,b))
+          | do_stm(T.MOVE(T.ESEQ(s,e),b)) = 
+            do_stm(T.SEQ(s,T.MOVE(e,b)))
           | do_stm(T.EXP(T.CALL(e,el))) = 
             reorder_stm(e::el,fn e::el => T.EXP(T.CALL(e,el)))
           | do_stm(T.EXP e) = 
@@ -99,8 +101,8 @@ struct
             reorder_exp([a,b], fn[a,b]=>T.BINOP(p,a,b))
           | do_exp(T.RELOP(p,a,b)) =
             reorder_exp([a,b], fn[a,b]=>T.RELOP(p,a,b))
-          | do_exp(T.LVALUE(T.MEM(a))) = 
-            reorder_exp([a], fn[a]=>T.LVALUE(T.MEM(a)))
+          | do_exp(T.MEM(a)) = 
+            reorder_exp([a], fn[a]=>T.MEM(a))
           | do_exp(T.ESEQ(s,e)) = 
             let
               val stms = do_stm s

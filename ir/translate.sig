@@ -13,9 +13,6 @@ signature TRANSLATE = sig
     val procEntryExit: {level: level , body: exp} -> unit
     val getResult: unit -> frag list
 
-    val simpleVar: access * level -> exp
-    val fieldVar: exp * int -> exp
-    val subscriptVar: exp * exp -> exp
     val nilExp: unit -> exp
     val intExp: int -> exp
     val stringExp: string -> exp
@@ -40,5 +37,8 @@ signature TRANSLATE = sig
     val breakExp: Temp.label -> exp
     val letExp: exp list * exp -> exp
     val arrayExp: exp * exp -> exp
+    val simpleVar: access * level -> exp
+    val fieldVar: exp * int -> exp
+    val subscriptVar: exp * exp -> exp
     val varDec: access * exp -> exp
 end

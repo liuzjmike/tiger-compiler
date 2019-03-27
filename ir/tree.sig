@@ -29,6 +29,5 @@ sig
 
   val seq: stm list -> stm
   val mem: exp * exp -> lvalue
-  (* val notRel : relop -> relop
-  val commute: relop -> relop *)
+  val notRel : exp -> exp
 end

@@ -4,6 +4,7 @@ $/basis.cm
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
 absyn.sml
+canon.sml
 env.sig
 env.sml
 errormsg.sml

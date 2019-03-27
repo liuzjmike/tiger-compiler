@@ -33,4 +33,21 @@ struct
   
   fun mem (a, offset) = MEM (BINOP (PLUS, a, offset))
 
+  fun notRel (RELOP (relop, left, right)) =
+      let 
+        fun f EQ = NE
+          | f NE = EQ
+          | f LT = GE
+          | f LE = GT
+          | f GT = LE
+          | f GE = LT
+          | f ULT = UGE
+          | f ULE = UGT
+          | f UGT = ULE
+          | f UGE = ULT
+      in RELOP (f relop, left, right)
+      end
+    | notRel e = RELOP (EQ, e, CONST 0)
+
+
 end

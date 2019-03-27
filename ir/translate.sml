@@ -60,21 +60,6 @@ struct
 
     fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  (T.LVALUE frameAddr)
 
-    fun simpleVar ((defLevel, access), curLevel) =
-        let val defId = case defLevel
-            of  Level {parent, frame, id} => id
-            |   Outermost => ErrorMsg.impossible "variable defined in the outermost level"
-            fun g ({parent, frame, id}, frameAddr) =
-                if id = defId
-                then F.exp access (T.LVALUE frameAddr)
-                else g (unLevel parent, staticLink frame frameAddr)
-        in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
-        end
-
-    fun fieldVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.CONST (i * F.wordSize))))
-
-    fun subscriptVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.BINOP (T.MUL, unEx i, T.CONST 4))))
-
     fun nilExp () = Ex (T.CONST 0)
 
     fun intExp i = Ex (T.CONST i)
@@ -241,6 +226,43 @@ struct
     |   letExp (varDecs, body) = Ex (T.ESEQ (T.seq (map unNx varDecs), unEx body))
 
     fun arrayExp (size, init) = Ex (F.externalCall ("initArray", [unEx size, unEx init]))
+
+    fun simpleVar ((defLevel, access), curLevel) =
+        let val defId = case defLevel
+            of  Level {parent, frame, id} => id
+            |   Outermost => ErrorMsg.impossible "variable defined in the outermost level"
+            fun g ({parent, frame, id}, frameAddr) =
+                if id = defId
+                then F.exp access (T.LVALUE frameAddr)
+                else g (unLevel parent, staticLink frame frameAddr)
+        in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
+        end
+
+    fun fieldVar (a, i) = 
+        let val addr = unEx a
+        in
+            ifThenElseExp (
+                Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
+                Ex (F.externalCall ("nilPointer", [])),
+                Ex (T.LVALUE (T.mem (addr, T.CONST (i * F.wordSize))))
+            )
+        end
+
+    fun subscriptVar (a, i) = 
+        let val addr = unEx a
+            val bound = T.LVALUE (T.mem (addr, T.CONST (~F.wordSize)))
+            val idx = unEx i
+        in
+            ifThenElseExp (
+                ifThenElseExp (
+                    Ex (T.RELOP (T.GE, idx, T.CONST 0)),
+                    Ex (T.RELOP (T.LT, idx, bound)),
+                    Ex (T.CONST 0)
+                ),
+                Ex (T.LVALUE (T.mem (addr, T.BINOP (T.MUL, idx, T.CONST 4)))),
+                Ex (F.externalCall ("indexOutOfBound", [idx, bound]))
+            )
+        end
 
     fun varDec ((level, access), value) = Nx (T.MOVE (F.exp access (T.LVALUE (T.TEMP F.FP)), unEx value))
 

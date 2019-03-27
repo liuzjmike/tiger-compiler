@@ -1,0 +1,1125 @@
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t204,
+   BINOP(PLUS,
+    CONST 0,
+    CONST 0)),
+  TEMP t204))
+tig-main
+MOVE(
+ TEMP t101,
+ CONST 0)
+L95
+MOVE(
+ TEMP t101,
+ TEMP t203)
+L94
+MOVE(
+ TEMP t101,
+ TEMP t201)
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t199,
+   CONST 4),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t198,
+   CONST 0),
+  ESEQ(
+   EXP(
+    RELOP(EQ,
+     TEMP t198,
+     CONST 0)),
+   RELOP(NE,
+    TEMP t198,
+    CONST 0))))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t197,
+   CONST 0),
+  TEMP t197))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t196,
+   CONST 0),
+  ESEQ(
+   MOVE(
+    TEMP t196,
+    CONST 0),
+   CONST 0)))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t195,
+   CONST 0),
+  BINOP(PLUS,
+   TEMP t195,
+   CONST 3)))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   MOVE(
+    TEMP t187,
+    CALL(
+     NAME initArray,
+      CONST 10,
+      CONST 0)),
+   SEQ(
+    MOVE(
+     TEMP t188,
+     CALL(
+      NAME initArray,
+       CONST 5,
+       ESEQ(
+        SEQ(
+         MOVE(
+          TEMP t189,
+          CALL(
+           NAME malloc,
+            CONST 16)),
+         SEQ(
+          MOVE(
+           MEM(
+            BINOP(PLUS,
+             TEMP t189,
+             CONST 0)),
+           NAME L85),
+          SEQ(
+           MOVE(
+            MEM(
+             BINOP(PLUS,
+              TEMP t189,
+              CONST 4)),
+            NAME L86),
+           SEQ(
+            MOVE(
+             MEM(
+              BINOP(PLUS,
+               TEMP t189,
+               CONST 8)),
+             CONST 0),
+            MOVE(
+             MEM(
+              BINOP(PLUS,
+               TEMP t189,
+               CONST 12)),
+             CONST 0))))),
+        TEMP t189))),
+    SEQ(
+     MOVE(
+      TEMP t190,
+      CALL(
+       NAME initArray,
+        CONST 100,
+        NAME L87)),
+     SEQ(
+      MOVE(
+       TEMP t191,
+       ESEQ(
+        SEQ(
+         MOVE(
+          TEMP t192,
+          CALL(
+           NAME malloc,
+            CONST 16)),
+         SEQ(
+          MOVE(
+           MEM(
+            BINOP(PLUS,
+             TEMP t192,
+             CONST 0)),
+           NAME L88),
+          SEQ(
+           MOVE(
+            MEM(
+             BINOP(PLUS,
+              TEMP t192,
+              CONST 4)),
+            NAME L89),
+           SEQ(
+            MOVE(
+             MEM(
+              BINOP(PLUS,
+               TEMP t192,
+               CONST 8)),
+             CONST 2432),
+            MOVE(
+             MEM(
+              BINOP(PLUS,
+               TEMP t192,
+               CONST 12)),
+             CONST 44))))),
+        TEMP t192)),
+      MOVE(
+       TEMP t193,
+       ESEQ(
+        SEQ(
+         MOVE(
+          TEMP t194,
+          CALL(
+           NAME malloc,
+            CONST 8)),
+         SEQ(
+          MOVE(
+           MEM(
+            BINOP(PLUS,
+             TEMP t194,
+             CONST 0)),
+           NAME L90),
+          MOVE(
+           MEM(
+            BINOP(PLUS,
+             TEMP t194,
+             CONST 4)),
+           CALL(
+            NAME initArray,
+             CONST 3,
+             CONST 1900)))),
+        TEMP t194)))))),
+  ESEQ(
+   MOVE(
+    MEM(
+     BINOP(PLUS,
+      TEMP t187,
+      BINOP(MUL,
+       CONST 0,
+       CONST 4))),
+    CONST 1),
+   ESEQ(
+    MOVE(
+     MEM(
+      BINOP(PLUS,
+       TEMP t187,
+       BINOP(MUL,
+        CONST 9,
+        CONST 4))),
+     CONST 3),
+    ESEQ(
+     MOVE(
+      MEM(
+       BINOP(PLUS,
+        MEM(
+         BINOP(PLUS,
+          TEMP t188,
+          BINOP(MUL,
+           CONST 3,
+           CONST 4))),
+        CONST 0)),
+      NAME L93),
+     ESEQ(
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         MEM(
+          BINOP(PLUS,
+           TEMP t188,
+           BINOP(MUL,
+            CONST 1,
+            CONST 4))),
+         CONST 12)),
+       CONST 23),
+      ESEQ(
+       MOVE(
+        MEM(
+         BINOP(PLUS,
+          TEMP t190,
+          BINOP(MUL,
+           CONST 34,
+           CONST 4))),
+        NAME L92),
+       ESEQ(
+        MOVE(
+         MEM(
+          BINOP(PLUS,
+           TEMP t191,
+           CONST 0)),
+         NAME L91),
+        ESEQ(
+         MOVE(
+          MEM(
+           BINOP(PLUS,
+            MEM(
+             BINOP(PLUS,
+              TEMP t193,
+              CONST 4)),
+            BINOP(MUL,
+             CONST 0,
+             CONST 4))),
+          CONST 2323),
+         ESEQ(
+          MOVE(
+           MEM(
+            BINOP(PLUS,
+             MEM(
+              BINOP(PLUS,
+               TEMP t193,
+               CONST 4)),
+             BINOP(MUL,
+              CONST 2,
+              CONST 4))),
+           CONST 2323),
+          CONST 0))))))))))
+tig-main
+MOVE(
+ TEMP t101,
+ CONST 0)
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L84,
+   TEMP t100,
+   CONST 2))
+L84
+MOVE(
+ TEMP t101,
+ TEMP t186)
+tig-main
+MOVE(
+ TEMP t101,
+ CONST 0)
+L83
+MOVE(
+ TEMP t101,
+ TEMP t184)
+L82
+MOVE(
+ TEMP t101,
+ TEMP t183)
+tig-main
+MOVE(
+ TEMP t101,
+ CONST 0)
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   MOVE(
+    TEMP t179,
+    CONST 0),
+   MOVE(
+    TEMP t180,
+    NAME L81)),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L79,
+   TEMP t100,
+   CONST 3,
+   NAME L80,
+   CONST 5))
+L79
+MOVE(
+ TEMP t101,
+ TEMP t177)
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L77,
+   TEMP t100,
+   NAME L78))
+L77
+MOVE(
+ TEMP t101,
+ TEMP t173)
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L74,
+   TEMP t100,
+   NAME L75,
+   NAME L76))
+L74
+MOVE(
+ TEMP t101,
+ TEMP t169)
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t166,
+   CONST 0),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t165,
+   CALL(
+    NAME initArray,
+     CONST 10,
+     NAME L73)),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t164,
+   NAME L72),
+  TEMP t164))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t163,
+   CALL(
+    NAME initArray,
+     CONST 10,
+     CONST 0)),
+  MEM(
+   BINOP(PLUS,
+    TEMP t163,
+    BINOP(MUL,
+     CONST 2,
+     CONST 4)))))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t162,
+   CALL(
+    NAME initArray,
+     CONST 10,
+     CONST 0)),
+  TEMP t162))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t160,
+   ESEQ(
+    SEQ(
+     MOVE(
+      TEMP t161,
+      CALL(
+       NAME malloc,
+        CONST 8)),
+     SEQ(
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t161,
+         CONST 0)),
+       NAME L71),
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t161,
+         CONST 4)),
+       CONST 0))),
+    TEMP t161)),
+  TEMP t160))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t157,
+   CONST 0),
+  CALL(
+   NAME L70,
+    TEMP t100,
+    CONST 2)))
+L70
+MOVE(
+ TEMP t101,
+ TEMP t159)
+tig-main
+MOVE(
+ TEMP t101,
+ BINOP(PLUS,
+  CONST 3,
+  NAME L69))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t156,
+   CONST 0),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t155,
+   CONST 0),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t153,
+   ESEQ(
+    SEQ(
+     MOVE(
+      TEMP t154,
+      CALL(
+       NAME malloc,
+        CONST 8)),
+     SEQ(
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t154,
+         CONST 0)),
+       NAME L67),
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t154,
+         CONST 4)),
+       CONST 0))),
+    TEMP t154)),
+  ESEQ(
+   MOVE(
+    MEM(
+     BINOP(PLUS,
+      TEMP t153,
+      CONST 0)),
+    CONST 3),
+   ESEQ(
+    MOVE(
+     MEM(
+      BINOP(PLUS,
+       TEMP t153,
+       CONST 4)),
+     NAME L68),
+    CONST 0))))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t151,
+   ESEQ(
+    SEQ(
+     MOVE(
+      TEMP t152,
+      CALL(
+       NAME malloc,
+        CONST 8)),
+     SEQ(
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t152,
+         CONST 0)),
+       NAME L65),
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t152,
+         CONST 4)),
+       CONST 0))),
+    TEMP t152)),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L61,
+   TEMP t100,
+   CONST 10))
+L61
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   CJUMP(
+    RELOP(EQ,
+     TEMP t149,
+     CONST 0),
+    L62,L63),
+   SEQ(
+    LABEL L62,
+    SEQ(
+     MOVE(
+      TEMP t150,
+      CONST 1),
+     SEQ(
+      JUMP(
+       NAME L64),
+      SEQ(
+       LABEL L63,
+       SEQ(
+        MOVE(
+         TEMP t150,
+         BINOP(MUL,
+          TEMP t149,
+          CALL(
+           NAME L61,
+            MEM(
+             BINOP(PLUS,
+              TEMP t100,
+              CONST ~4)),
+            BINOP(MINUS,
+             TEMP t149,
+             CONST 1)))),
+        LABEL L64)))))),
+  TEMP t150))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   CJUMP(
+    RELOP(GT,
+     CONST 10,
+     CONST 5),
+    L60,L59),
+   SEQ(
+    LABEL L60,
+    SEQ(
+     EXP(
+      ESEQ(
+       EXP(
+        BINOP(PLUS,
+         CONST 0,
+         CONST 1)),
+       CONST 0)),
+     SEQ(
+      CJUMP(
+       RELOP(GT,
+        CONST 10,
+        CONST 5),
+       L60,L59),
+      LABEL L59)))),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L54,
+   TEMP t100,
+   CONST 0,
+   NAME L58))
+L55
+MOVE(
+ TEMP t101,
+ ESEQ(
+  EXP(
+   CALL(
+    NAME L54,
+     MEM(
+      BINOP(PLUS,
+       TEMP t100,
+       CONST ~4)),
+     CONST 0,
+     NAME L57)),
+  NAME L56))
+L54
+MOVE(
+ TEMP t101,
+ ESEQ(
+  EXP(
+   CALL(
+    NAME L55,
+     MEM(
+      BINOP(PLUS,
+       TEMP t100,
+       CONST ~4)),
+     BINOP(PLUS,
+      TEMP t145,
+      CONST 1))),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t139,
+   CONST 0),
+  CALL(
+   NAME L49,
+    TEMP t100,
+    CONST 0,
+    NAME L53)))
+L50
+MOVE(
+ TEMP t101,
+ ESEQ(
+  EXP(
+   CALL(
+    NAME L49,
+     MEM(
+      BINOP(PLUS,
+       TEMP t100,
+       CONST ~4)),
+     TEMP t141,
+     NAME L52)),
+  NAME L51))
+L49
+MOVE(
+ TEMP t101,
+ ESEQ(
+  EXP(
+   CONST 0),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t134,
+   CONST 0),
+  TEMP t134))
+tig-main
+MOVE(
+ TEMP t101,
+ NAME L48)
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   JUMP(
+    NAME L46),
+   SEQ(
+    LABEL L46,
+    SEQ(
+     EXP(
+      CONST 3),
+     LABEL L47))),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   MOVE(
+    TEMP t130,
+    ESEQ(
+     SEQ(
+      MOVE(
+       TEMP t131,
+       CALL(
+        NAME malloc,
+         CONST 8)),
+      SEQ(
+       MOVE(
+        MEM(
+         BINOP(PLUS,
+          TEMP t131,
+          CONST 0)),
+        NAME L42),
+       MOVE(
+        MEM(
+         BINOP(PLUS,
+          TEMP t131,
+          CONST 4)),
+        CONST 0))),
+     TEMP t131)),
+   MOVE(
+    TEMP t132,
+    CALL(
+     NAME initArray,
+      CONST 3,
+      CONST 0))),
+  ESEQ(
+   SEQ(
+    CJUMP(
+     RELOP(NE,
+      TEMP t130,
+      TEMP t132),
+     L43,L44),
+    SEQ(
+     LABEL L43,
+     SEQ(
+      MOVE(
+       TEMP t133,
+       CONST 3),
+      SEQ(
+       JUMP(
+        NAME L45),
+       SEQ(
+        LABEL L44,
+        SEQ(
+         MOVE(
+          TEMP t133,
+          CONST 4),
+         LABEL L45)))))),
+   TEMP t133)))
+tig-main
+MOVE(
+ TEMP t101,
+ RELOP(GT,
+  CONST 3,
+  NAME L41))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t127,
+   CONST 0),
+  ESEQ(
+   SEQ(
+    MOVE(
+     TEMP t128,
+     CONST 0),
+    SEQ(
+     MOVE(
+      TEMP t129,
+      CONST 100),
+     SEQ(
+      CJUMP(
+       RELOP(LE,
+        TEMP t128,
+        TEMP t129),
+       L40,L38),
+      SEQ(
+       LABEL L39,
+       SEQ(
+        MOVE(
+         TEMP t128,
+         BINOP(PLUS,
+          TEMP t128,
+          CONST 1)),
+        SEQ(
+         LABEL L40,
+         SEQ(
+          EXP(
+           ESEQ(
+            MOVE(
+             TEMP t127,
+             BINOP(PLUS,
+              TEMP t127,
+              CONST 1)),
+            CONST 0)),
+          SEQ(
+           CJUMP(
+            RELOP(LT,
+             TEMP t128,
+             TEMP t129),
+            L40,L38),
+           LABEL L38)))))))),
+   CONST 0)))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   MOVE(
+    TEMP t125,
+    CONST 10),
+   SEQ(
+    MOVE(
+     TEMP t126,
+     NAME L34),
+    SEQ(
+     CJUMP(
+      RELOP(LE,
+       TEMP t125,
+       TEMP t126),
+      L37,L35),
+     SEQ(
+      LABEL L36,
+      SEQ(
+       MOVE(
+        TEMP t125,
+        BINOP(PLUS,
+         TEMP t125,
+         CONST 1)),
+       SEQ(
+        LABEL L37,
+        SEQ(
+         MOVE(
+          TEMP t125,
+          BINOP(MINUS,
+           TEMP t125,
+           CONST 1)),
+         SEQ(
+          CJUMP(
+           RELOP(LT,
+            TEMP t125,
+            TEMP t126),
+           L37,L35),
+          LABEL L35)))))))),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   CJUMP(
+    RELOP(GT,
+     CONST 10,
+     CONST 5),
+    L33,L32),
+   SEQ(
+    LABEL L33,
+    SEQ(
+     EXP(
+      BINOP(PLUS,
+       CONST 5,
+       CONST 6)),
+     SEQ(
+      CJUMP(
+       RELOP(GT,
+        CONST 10,
+        CONST 5),
+       L33,L32),
+      LABEL L32)))),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ CONST 0)
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   CJUMP(
+    RELOP(GT,
+     CONST 10,
+     CONST 20),
+    L25,L26),
+   SEQ(
+    LABEL L25,
+    SEQ(
+     MOVE(
+      TEMP t123,
+      CONST 30),
+     SEQ(
+      JUMP(
+       NAME L27),
+      SEQ(
+       LABEL L26,
+       SEQ(
+        MOVE(
+         TEMP t123,
+         CONST 40),
+        LABEL L27)))))),
+  TEMP t123))
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L20,
+   TEMP t100,
+   CONST 0,
+   NAME L24))
+L21
+MOVE(
+ TEMP t101,
+ ESEQ(
+  EXP(
+   CALL(
+    NAME L20,
+     MEM(
+      BINOP(PLUS,
+       TEMP t100,
+       CONST ~4)),
+     TEMP t122,
+     NAME L23)),
+  NAME L22))
+L20
+MOVE(
+ TEMP t101,
+ ESEQ(
+  EXP(
+   CALL(
+    NAME L21,
+     MEM(
+      BINOP(PLUS,
+       TEMP t100,
+       CONST ~4)),
+     BINOP(PLUS,
+      TEMP t120,
+      CONST 1))),
+  CONST 0))
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L16,
+   TEMP t100,
+   CONST 0,
+   NAME L19))
+L17
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L16,
+   MEM(
+    BINOP(PLUS,
+     TEMP t100,
+     CONST ~4)),
+   TEMP t116,
+   NAME L18))
+L16
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L17,
+   MEM(
+    BINOP(PLUS,
+     TEMP t100,
+     CONST ~4)),
+   BINOP(PLUS,
+    TEMP t114,
+    CONST 1)))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t109,
+   ESEQ(
+    SEQ(
+     MOVE(
+      TEMP t110,
+      CALL(
+       NAME malloc,
+        CONST 8)),
+     SEQ(
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t110,
+         CONST 0)),
+       CONST 0),
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t110,
+         CONST 4)),
+       CONST 0))),
+    TEMP t110)),
+  TEMP t109))
+tig-main
+MOVE(
+ TEMP t101,
+ CALL(
+  NAME L12,
+   TEMP t100,
+   CONST 10))
+L12
+MOVE(
+ TEMP t101,
+ ESEQ(
+  SEQ(
+   CJUMP(
+    RELOP(EQ,
+     TEMP t107,
+     CONST 0),
+    L13,L14),
+   SEQ(
+    LABEL L13,
+    SEQ(
+     MOVE(
+      TEMP t108,
+      CONST 1),
+     SEQ(
+      JUMP(
+       NAME L15),
+      SEQ(
+       LABEL L14,
+       SEQ(
+        MOVE(
+         TEMP t108,
+         BINOP(MUL,
+          TEMP t107,
+          CALL(
+           NAME L12,
+            MEM(
+             BINOP(PLUS,
+              TEMP t100,
+              CONST ~4)),
+            BINOP(MINUS,
+             TEMP t107,
+             CONST 1)))),
+        LABEL L15)))))),
+  TEMP t108))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t104,
+   ESEQ(
+    SEQ(
+     MOVE(
+      TEMP t105,
+      CALL(
+       NAME malloc,
+        CONST 8)),
+     SEQ(
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t105,
+         CONST 0)),
+       NAME L10),
+      MOVE(
+       MEM(
+        BINOP(PLUS,
+         TEMP t105,
+         CONST 4)),
+       CONST 1000))),
+    TEMP t105)),
+  ESEQ(
+   MOVE(
+    MEM(
+     BINOP(PLUS,
+      TEMP t104,
+      CONST 0)),
+    NAME L11),
+   TEMP t104)))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t103,
+   CALL(
+    NAME initArray,
+     CONST 10,
+     CONST 0)),
+  TEMP t103))
+tig-main
+MOVE(
+ TEMP t101,
+ ESEQ(
+  MOVE(
+   TEMP t102,
+   CALL(
+    NAME initArray,
+     CONST 10,
+     CONST 0)),
+  TEMP t102))

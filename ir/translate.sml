@@ -32,9 +32,11 @@ struct
     )
 
     fun unEx (Ex e) = e
+    |   unEx (Nx (T.EXP e)) = e
     |   unEx (Nx s) = T.ESEQ (s, T.CONST 0)
 
     fun unNx (Nx s) = s
+    |   unNx (Ex (T.ESEQ (s, T.CONST c))) = s
     |   unNx (Ex e) = T.EXP e
 
     (* During translation into assembly, if `e` is T.RELOP it should be munched directly;
@@ -69,7 +71,7 @@ struct
         in Ex (T.LVALUE (g (unLevel curLevel, T.TEMP F.FP)))
         end
 
-    fun fieldVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.CONST (i * 4))))
+    fun fieldVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.CONST (i * F.wordSize))))
 
     fun subscriptVar (a, i) = Ex (T.LVALUE (T.mem (unEx a, T.BINOP (T.MUL, unEx i, T.CONST 4))))
 
@@ -104,18 +106,41 @@ struct
 
     fun divExp (left, right) = Ex (T.BINOP (T.DIV, unEx left, unEx right))
 
-    (* TODO: Special treatment for comparing strings *)
-    fun eqExp (left, right) = Ex (T.RELOP (T.EQ, unEx left, unEx right))
+    fun eqExp (left, right, string) = Ex (
+        if string
+        then F.externalCall ("stringEqual", [unEx left, unEx right])
+        else T.RELOP (T.EQ, unEx left, unEx right)
+    )
 
-    fun neExp (left, right) = Ex (T.RELOP (T.NE, unEx left, unEx right))
+    fun neExp (left, right, string) = Ex (
+        if string
+        then T.BINOP (T.MINUS, T.CONST 1, F.externalCall ("stringEqual", [unEx left, unEx right]))
+        else T.RELOP (T.NE, unEx left, unEx right)
+    )
 
-    fun ltExp (left, right) = Ex (T.RELOP (T.LT, unEx left, unEx right))
+    fun ltExp (left, right, string) = Ex (
+        if string
+        then F.externalCall ("stringLessThan", [unEx left, unEx right])
+        else T.RELOP (T.LT, unEx left, unEx right)
+    )
 
-    fun leExp (left, right) = Ex (T.RELOP (T.LE, unEx left, unEx right))
+    fun leExp (left, right, string) = Ex (
+        if string
+        then T.BINOP (T.MINUS, T.CONST 1, F.externalCall ("stringLessThan", [unEx right, unEx left]))
+        else T.RELOP (T.LE, unEx left, unEx right)
+    )
 
-    fun gtExp (left, right) = Ex (T.RELOP (T.GT, unEx left, unEx right))
+    fun gtExp (left, right, string) = Ex (
+        if string
+        then F.externalCall ("stringLessThan", [unEx right, unEx left])
+        else T.RELOP (T.GT, unEx left, unEx right)
+    )
 
-    fun geExp (left, right) = Ex (T.RELOP (T.GE, unEx left, unEx right))
+    fun geExp (left, right, string) = Ex (
+        if string
+        then T.BINOP (T.MINUS, T.CONST 1, F.externalCall ("stringLessThan", [unEx left, unEx right]))
+        else T.RELOP (T.GE, unEx left, unEx right)
+    )
 
     fun recordExp fields =
         let val a = T.TEMP (Temp.newtemp ())
@@ -137,7 +162,7 @@ struct
         end
 
     fun assignExp (Ex (T.LVALUE lvalue), value) = Nx (T.MOVE (lvalue, unEx value))
-    |   assignExp (var, value) = ErrorMsg.impossible "invalid assignment"
+    |   assignExp (var, value) = Ex (T.CONST 0)
 
     fun ifThenExp (test, then') =
         let val c = branch test
@@ -215,12 +240,7 @@ struct
     fun letExp ([], body) = body
     |   letExp (varDecs, body) = Ex (T.ESEQ (T.seq (map unNx varDecs), unEx body))
 
-    fun arrayExp (size, init) =
-        let val a = T.TEMP (Temp.newtemp ())
-            val extCall = F.externalCall ("initArray", [unEx size, unEx init])
-        in
-            Ex (T.ESEQ (T.MOVE (a, extCall), T.LVALUE a))
-        end
+    fun arrayExp (size, init) = Ex (F.externalCall ("initArray", [unEx size, unEx init]))
 
     fun varDec ((level, access), value) = Nx (T.MOVE (F.exp access (T.LVALUE (T.TEMP F.FP)), unEx value))
 

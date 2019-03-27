@@ -27,14 +27,16 @@ struct
             fun checkArithmeticOperands (expty1, expty2, pos) =
                 (checkInt (expty1, pos), checkInt (expty2, pos))
 
-            fun checkComparisonOperands ({exp=exp1, ty=ty1}, {exp=exp2, ty=ty2}, pos) = (
-                if Ty.isSubtype (ty1, ty2) orelse Ty.isSubtype (ty2, ty1)
-                then case (ty1, ty2)
-                    of  (Ty.NIL, Ty.NIL) => error pos "compare two nil's"
-                    |   _ => ()
-                else error pos "compare values of different types";
-                (exp1, exp2)
-            )
+            fun checkComparisonOperands ({exp=exp1, ty=ty1}, {exp=exp2, ty=ty2}, pos) =
+                let val string =
+                    if Ty.isSubtype (ty1, ty2) orelse Ty.isSubtype (ty2, ty1)
+                    then case (ty1, ty2)
+                        of  (Ty.NIL, Ty.NIL) => (error pos "compare two nil's"; false)
+                        |   (Ty.STRING, TySTRING) => true
+                        |   _ => false
+                    else (error pos "compare values of different types"; false)
+                in (exp1, exp2, string)
+                end
 
             fun checkOrderOperands (expty1, expty2, pos) =
                 let fun hasOrder ty = case ty
@@ -59,32 +61,33 @@ struct
             |   trexp A.NilExp = {exp=Tr.nilExp (), ty=Ty.NIL}
             |   trexp (A.IntExp i) = {exp=Tr.intExp i, ty=Ty.INT}
             |   trexp (A.StringExp (s, pos)) = {exp=Tr.stringExp s, ty=Ty.STRING}
-            |   trexp (A.CallExp {func, args, pos}) = (
-                case S.look (venv, func)
-                of  SOME (E.FunEntry {level=funLevel, label, formals, result}) =>
-                    let val actuals = map trexp args
-                        val actualsExp = map (fn {exp, ty} => exp) actuals
-                        fun checkArgs ([], []) = ()
-                        |   checkArgs ([], a2::l2) = error pos "too many arguments"
-                        |   checkArgs (a1::l1, []) = error pos "insufficient arguments"
-                        |   checkArgs (t1::l1, {exp,ty=t2}::l2) = (
-                            if canAccept (t1, t2) then ()
-                            else error pos "incorrect argument type";
-                            checkArgs (l1, l2)
-                        )
-                    in
-                        checkArgs (formals, actuals);
-                        {exp=Tr.callExp (actualsExp, level, funLevel, label), ty=result}
-                    end
-                |   SOME (E.VarEntry _) => (
-                    error pos (S.name func ^ " is not a function");
-                    {exp=Tr.nilExp (), ty=Ty.BOTTOM}
-                )
-                |   NONE => (
-                    error pos ("unbound function " ^ S.name func);
-                    {exp=Tr.nilExp (), ty=Ty.BOTTOM}
-                )
-            )
+            |   trexp (A.CallExp {func, args, pos}) =
+                let val actuals = map trexp args
+                in
+                    case S.look (venv, func)
+                    of  SOME (E.FunEntry {level=funLevel, label, formals, result}) =>
+                        let val actualsExp = map (fn {exp, ty} => exp) actuals
+                            fun checkArgs ([], []) = ()
+                            |   checkArgs ([], a2::l2) = error pos "too many arguments"
+                            |   checkArgs (a1::l1, []) = error pos "insufficient arguments"
+                            |   checkArgs (t1::l1, {exp,ty=t2}::l2) = (
+                                if canAccept (t1, t2) then ()
+                                else error pos "incorrect argument type";
+                                checkArgs (l1, l2)
+                            )
+                        in
+                            checkArgs (formals, actuals);
+                            {exp=Tr.callExp (actualsExp, level, funLevel, label), ty=result}
+                        end
+                    |   SOME (E.VarEntry _) => (
+                        error pos (S.name func ^ " is not a function");
+                        {exp=Tr.nilExp (), ty=Ty.BOTTOM}
+                    )
+                    |   NONE => (
+                        error pos ("unbound function " ^ S.name func);
+                        {exp=Tr.nilExp (), ty=Ty.BOTTOM}
+                    )
+                end
             |   trexp (A.OpExp {left, oper=A.PlusOp, right, pos}) =
                 let val (exp1, exp2) = checkArithmeticOperands (trexp left, trexp right, pos)
                 in {exp=Tr.plusExp (exp1, exp2), ty=Ty.INT}
@@ -102,53 +105,54 @@ struct
                 in {exp=Tr.divExp (exp1, exp2), ty=Ty.INT}
                 end
             |   trexp (A.OpExp {left, oper=A.EqOp, right, pos}) =
-                let val (exp1, exp2) = checkComparisonOperands (trexp left, trexp right, pos)
-                in {exp=Tr.eqExp (exp1, exp2), ty=Ty.INT}
+                let val (exp1, exp2, string) = checkComparisonOperands (trexp left, trexp right, pos)
+                in {exp=Tr.eqExp (exp1, exp2, string), ty=Ty.INT}
                 end
             |   trexp (A.OpExp {left, oper=A.NeqOp, right, pos}) =
-                let val (exp1, exp2) = checkComparisonOperands (trexp left, trexp right, pos)
-                in {exp=Tr.neExp (exp1, exp2), ty=Ty.INT}
+                let val (exp1, exp2, string) = checkComparisonOperands (trexp left, trexp right, pos)
+                in {exp=Tr.neExp (exp1, exp2, string), ty=Ty.INT}
                 end
             |   trexp (A.OpExp {left, oper=A.LtOp, right, pos}) =
-                let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
-                in {exp=Tr.ltExp (exp1, exp2), ty=Ty.INT}
+                let val (exp1, exp2, string) = checkOrderOperands (trexp left, trexp right, pos)
+                in {exp=Tr.ltExp (exp1, exp2, string), ty=Ty.INT}
                 end
             |   trexp (A.OpExp {left, oper=A.LeOp, right, pos}) =
-                let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
-                in {exp=Tr.leExp (exp1, exp2), ty=Ty.INT}
+                let val (exp1, exp2, string) = checkOrderOperands (trexp left, trexp right, pos)
+                in {exp=Tr.leExp (exp1, exp2, string), ty=Ty.INT}
                 end
             |   trexp (A.OpExp {left, oper=A.GtOp, right, pos}) =
-                let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
-                in {exp=Tr.gtExp (exp1, exp2), ty=Ty.INT}
+                let val (exp1, exp2, string) = checkOrderOperands (trexp left, trexp right, pos)
+                in {exp=Tr.gtExp (exp1, exp2, string), ty=Ty.INT}
                 end
             |   trexp (A.OpExp {left, oper=A.GeOp, right, pos}) =
-                let val (exp1, exp2) = checkOrderOperands (trexp left, trexp right, pos)
-                in {exp=Tr.geExp (exp1, exp2), ty=Ty.INT}
+                let val (exp1, exp2, string) = checkOrderOperands (trexp left, trexp right, pos)
+                in {exp=Tr.geExp (exp1, exp2, string), ty=Ty.INT}
                 end
-            |   trexp (A.RecordExp {fields, typ, pos}) = (
-                case S.look (tenv, typ)
-                of SOME (Ty.RECORD (fieldList, unique)) =>
-                    let val fields = map (fn (id, exp, pos) => (id, trexp exp, pos)) fields
-                        val fieldsExp = map (fn (id, {exp, ty}, pos) => exp) fields
-                        fun checkFields ([], []) = ()
-                        |   checkFields ([], f2::l2) = error pos "too many fields in record creation"
-                        |   checkFields (f1::l1, []) = error pos "insufficient fields in record creation"
-                        |   checkFields ((id1, ty1)::l1, (id2, {exp, ty=ty2}, fieldPos)::l2) = (
-                            if id1 = id2 then () else error fieldPos "incorrect field name";
-                            if canAccept (ty1 (), ty2) then () else error fieldPos "incorrect field type";
-                            checkFields (l1, l2)
-                        )
-                    in
-                        checkFields (fieldList, fields);
-                        {exp=Tr.recordExp fieldsExp, ty=Ty.RECORD (fieldList, unique)}
-                    end
-                |   SOME Ty.BOTTOM => {exp=Tr.nilExp (), ty=Ty.BOTTOM}
-                |   SOME _ => (
-                    error pos "create record with non-record type";
-                    {exp=Tr.nilExp (), ty=Ty.BOTTOM}
-                )
-                |   NONE => (unboundTypeError (typ, pos); {exp=Tr.nilExp (), ty=Ty.BOTTOM})
-            )
+            |   trexp (A.RecordExp {fields, typ, pos}) = 
+                let val fields = map (fn (id, exp, pos) => (id, trexp exp, pos)) fields
+                in
+                    case S.look (tenv, typ)
+                    of SOME (Ty.RECORD (fieldList, unique)) =>
+                        let val fieldsExp = map (fn (id, {exp, ty}, pos) => exp) fields
+                            fun checkFields ([], []) = ()
+                            |   checkFields ([], f2::l2) = error pos "too many fields in record creation"
+                            |   checkFields (f1::l1, []) = error pos "insufficient fields in record creation"
+                            |   checkFields ((id1, ty1)::l1, (id2, {exp, ty=ty2}, fieldPos)::l2) = (
+                                if id1 = id2 then () else error fieldPos "incorrect field name";
+                                if canAccept (ty1 (), ty2) then () else error fieldPos "incorrect field type";
+                                checkFields (l1, l2)
+                            )
+                        in
+                            checkFields (fieldList, fields);
+                            {exp=Tr.recordExp fieldsExp, ty=Ty.RECORD (fieldList, unique)}
+                        end
+                    |   SOME Ty.BOTTOM => {exp=Tr.nilExp (), ty=Ty.BOTTOM}
+                    |   SOME _ => (
+                        error pos "create record with non-record type";
+                        {exp=Tr.nilExp (), ty=Ty.BOTTOM}
+                    )
+                    |   NONE => (unboundTypeError (typ, pos); {exp=Tr.nilExp (), ty=Ty.BOTTOM})
+                end
             |   trexp (A.SeqExp expList) =
                 let fun f [] = ([], Ty.UNIT)
                     |   f [(exp, pos)] = let val {exp=res, ty=ty} = trexp exp in ([res], ty) end
@@ -218,24 +222,27 @@ struct
                 in {exp=Tr.letExp (varDecs, bodyExp), ty=bodyTy}
                 end
             |   trexp (A.ArrayExp {typ, size, init, pos}) =
-                let val (eleTy, unique) = case S.look (tenv, typ)
-                    of  SOME ty => (
-                        case ty
-                        of  Ty.ARRAY (eleTy, unique) => (eleTy (), unique)
-                        |   Ty.BOTTOM => (Ty.BOTTOM, ref())
-                        |   _ => (
-                            error pos ("create array with non-array type " ^ S.name typ);
-                            (Ty.BOTTOM, ref ())
-                        )
-                    )
-                    |   NONE => (unboundTypeError (typ, pos); (Ty.BOTTOM, ref ()))
-                    val sizeExp = checkInt (trexp size, pos)
+                let val sizeExp = checkInt (trexp size, pos)
                     val {exp=initExp, ty=initTy} = trexp init
                 in
-                    if canAccept (eleTy, initTy)
-                    then ()
-                    else error pos "incorrect array initial value type";
-                    {exp=Tr.arrayExp (sizeExp, initExp), ty=Ty.ARRAY (fn () => eleTy, unique)}
+                    case S.look (tenv, typ)
+                    of  SOME ty => (
+                        case ty
+                        of  Ty.ARRAY (eleTy, unique) =>
+                            let val eleTy = eleTy ()
+                                val exp =
+                                    if canAccept (eleTy, initTy)
+                                    then Tr.arrayExp (sizeExp, initExp)
+                                    else (error pos "incorrect array initial value type"; Tr.nilExp ())
+                            in {exp=exp, ty=Ty.ARRAY (fn () => eleTy, unique)}
+                            end
+                        |   Ty.BOTTOM => {exp=Tr.nilExp (), ty=Ty.BOTTOM}
+                        |   _ => (
+                            error pos ("create array with non-array type " ^ S.name typ);
+                            {exp=Tr.nilExp (), ty=Ty.BOTTOM}
+                        )
+                    )
+                    |   NONE => (unboundTypeError (typ, pos); {exp=Tr.nilExp (), ty=Ty.BOTTOM})
                 end
 
             and trvar (A.SimpleVar (id, pos)) = (
@@ -251,7 +258,7 @@ struct
                 )
             )
             |   trvar (A.FieldVar (lvalue, id, pos)) =
-                let val {exp=exp, ty=ty} = #1 (trvar lvalue)
+                let val {exp, ty} = #1 (trvar lvalue)
                     fun f ([], i) = (
                         error pos ("field " ^ S.name id ^ " does not exist");
                         ({exp=Tr.nilExp (), ty=Ty.BOTTOM}, false)
@@ -314,12 +321,12 @@ struct
                                         formals=map #ty params', result=resultTy
                                     }),
                                 localEnv,
-                                (name, params', resultTy, body, pos, funLevel)::decList
+                                (params', resultTy, body, pos, funLevel)::decList
                             )
                         end
                     val (venv', localEnv, decList') = foldl addFunToEnv (venv, S.empty, []) decList
                     val decList' = List.rev decList'
-                    fun checkBody (name, params, result, body, pos, funLevel) =
+                    fun transBody (params, result, body, pos, funLevel) =
                         let fun enterparam ({name, ty, escape}, venv) = S.enter (
                                 venv, name,
                                 E.VarEntry {
@@ -335,7 +342,7 @@ struct
                             Tr.procEntryExit {level=funLevel, body=bodyExp}
                         end
                 in
-                    map checkBody decList';
+                    map transBody decList';
                     {venv=venv', tenv=tenv, varDecs=varDecs}
                 end
             |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}, varDecs) =

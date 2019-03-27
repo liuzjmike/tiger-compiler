@@ -24,12 +24,12 @@ signature TRANSLATE = sig
     val minusExp: exp * exp -> exp
     val mulExp: exp * exp -> exp
     val divExp: exp * exp -> exp
-    val eqExp: exp * exp -> exp
-    val neExp: exp * exp -> exp
-    val ltExp: exp * exp -> exp
-    val leExp: exp * exp -> exp
-    val gtExp: exp * exp -> exp
-    val geExp: exp * exp -> exp
+    val eqExp: exp * exp * bool -> exp
+    val neExp: exp * exp * bool -> exp
+    val ltExp: exp * exp * bool -> exp
+    val leExp: exp * exp * bool -> exp
+    val gtExp: exp * exp * bool -> exp
+    val geExp: exp * exp * bool -> exp
     val recordExp: exp list -> exp
     val seqExp: exp list -> exp
     val assignExp: exp * exp -> exp

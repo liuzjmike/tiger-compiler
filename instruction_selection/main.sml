@@ -6,7 +6,10 @@ struct
   structure Semant = Semant (Tr)
   (* structure R = RegAlloc *)
 
-  fun getsome (SOME x) = x
+  fun tempName t =
+    case Temp.Table.look (F.tempMap, t) of
+        SOME name => name
+      | NONE => Temp.makestring t
 
   fun emitproc out (F.PROC{body,frame}) =
       let
@@ -16,7 +19,7 @@ struct
         (* val _ = app (fn s => Printtree.printtree(out,s)) stms; *)
         val stms' = Canon.traceSchedule(Canon.basicBlocks stms)
         val instrs = List.concat(map (MipsGen.codegen frame) stms') 
-        val format0 = Assem.format(Temp.makestring)
+        val format0 = Assem.format(tempName)
       in app (fn i => TextIO.output(out,format0 i)) instrs
       end
     | emitproc out (F.STRING (lab,s)) = TextIO.output(out,F.string(lab,s))

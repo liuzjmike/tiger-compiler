@@ -24,6 +24,16 @@ struct
         ("$a3", Temp.newtemp ())
     ]
     val calleesaves = [
+        ("$s0", Temp.newtemp ()),
+        ("$s1", Temp.newtemp ()),
+        ("$s2", Temp.newtemp ()),
+        ("$s3", Temp.newtemp ()),
+        ("$s4", Temp.newtemp ()),
+        ("$s5", Temp.newtemp ()),
+        ("$s6", Temp.newtemp ()),
+        ("$s7", Temp.newtemp ())
+    ]
+    val callersaves = [
         ("$t0", Temp.newtemp ()),
         ("$t1", Temp.newtemp ()),
         ("$t2", Temp.newtemp ()),
@@ -34,16 +44,6 @@ struct
         ("$t7", Temp.newtemp ()),
         ("$t8", Temp.newtemp ()),
         ("$t9", Temp.newtemp ())
-    ]
-    val callersaves = [
-        ("$s0", Temp.newtemp ()),
-        ("$s1", Temp.newtemp ()),
-        ("$s2", Temp.newtemp ()),
-        ("$s3", Temp.newtemp ()),
-        ("$s4", Temp.newtemp ()),
-        ("$s5", Temp.newtemp ()),
-        ("$s6", Temp.newtemp ()),
-        ("$s7", Temp.newtemp ())
     ]
     val tempMap =
         foldl (fn (l, m) => 

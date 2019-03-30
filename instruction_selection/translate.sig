@@ -32,8 +32,8 @@ signature TRANSLATE = sig
     val assignExp: exp * exp -> exp
     val ifThenExp: exp * exp -> exp
     val ifThenElseExp: exp * exp * exp -> exp
-    val whileExp: exp * exp * Temp.label -> exp
-    val forExp: access * exp * exp * exp * Temp.label -> exp
+    val whileExp: exp * (Temp.label -> exp) -> exp
+    val forExp: access * exp * exp * (Temp.label -> exp) -> exp
     val breakExp: Temp.label -> exp
     val letExp: exp list * exp -> exp
     val arrayExp: exp * exp -> exp

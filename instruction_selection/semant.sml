@@ -196,9 +196,8 @@ struct
                 end
             |   trexp (A.WhileExp {test, body, pos}) =
                 let val testExp = checkInt (trexp test, pos)
-                    val breakLabel = Temp.newlabel ()
-                    val bodyExp = checkUnit (transExp (venv, tenv, body, SOME breakLabel, level), pos)
-                in {exp=Tr.whileExp (testExp, bodyExp, breakLabel), ty=Ty.UNIT}
+                    fun bodyExp breakLabel = checkUnit (transExp (venv, tenv, body, SOME breakLabel, level), pos)
+                in {exp=Tr.whileExp (testExp, bodyExp), ty=Ty.UNIT}
                 end
             |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) =
                 let val access = Tr.allocLocal level (!escape)
@@ -207,9 +206,8 @@ struct
                     val venv' = S.enter (venv, var, E.VarEntry {
                         access=access, ty=Ty.INT, forIdx=true
                     })
-                    val breakLabel = Temp.newlabel ()
-                    val bodyExp = checkUnit (transExp (venv', tenv, body, SOME breakLabel, level), pos)
-                in {exp=Tr.forExp (access, loExp, hiExp, bodyExp, breakLabel), ty=Ty.UNIT}
+                    fun bodyExp breakLabel = checkUnit (transExp (venv', tenv, body, SOME breakLabel, level), pos)
+                in {exp=Tr.forExp (access, loExp, hiExp, bodyExp), ty=Ty.UNIT}
                 end
             |   trexp (A.BreakExp pos) = (
                 case break
@@ -436,7 +434,7 @@ struct
         end
 
     fun transProg exp =
-        let val level = Tr.newLevel {parent=Tr.outermost, name=Temp.namedlabel "tig-main", formals=[]}
+        let val level = Tr.newLevel {parent=Tr.outermost, name=Temp.namedlabel "tigermain", formals=[]}
             val {exp, ty} = transExp (E.base_venv, E.base_tenv, exp, NONE, level)
         in
             Tr.procEntryExit {level=level, body=exp};

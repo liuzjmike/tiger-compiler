@@ -24,61 +24,61 @@ struct
         foldl addToTable S.empty [
             ("print", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "print",
                 formals=[T.STRING],
                 result=T.UNIT
             }),
             ("flush", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "flush",
                 formals=[],
                 result=T.UNIT
             }),
             ("getchar", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "getchar",
                 formals=[],
                 result=T.STRING
             }),
             ("ord", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "ord",
                 formals=[T.STRING],
                 result=T.INT
             }),
             ("chr", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "chr",
                 formals=[T.INT],
                 result=T.STRING
             }),
             ("size", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "size",
                 formals=[T.STRING],
                 result=T.INT
             }),
             ("substring", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "substring",
                 formals=[T.STRING, T.INT, T.INT],
                 result=T.STRING
             }),
             ("concat", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "concat",
                 formals=[T.STRING, T.STRING],
                 result=T.STRING
             }),
             ("not", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "not",
                 formals=[T.INT],
                 result=T.INT
             }),
             ("exit", FunEntry {
                 level=Translate.outermost,
-                label=Temp.newlabel (),
+                label=Temp.namedlabel "exit",
                 formals=[T.INT],
                 result=T.UNIT
             })

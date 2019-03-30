@@ -11,7 +11,12 @@ struct
 
     val outermost = Outermost
 
-    val fragList: F.frag list ref = ref []
+    val nilPointer = Temp.newlabel ()
+    val indexOutOfBound = Temp.newlabel ()
+    val fragList: F.frag list ref = ref [
+        F.STRING (nilPointer, "nil pointer"),
+        F.STRING (indexOutOfBound, "array index out of bound")
+    ]
 
     fun newLevel {parent, name, formals} = Level {
         parent=parent,
@@ -37,6 +42,7 @@ struct
 
     fun unNx (Nx s) = s
     |   unNx (Ex (T.ESEQ (s, T.CONST c))) = s
+    |   unNx (Ex (T.ESEQ (s, T.TEMP t))) = s
     |   unNx (Ex e) = T.EXP e
 
     (* During translation into assembly, if `e` is T.RELOP it should be munched directly;
@@ -105,6 +111,7 @@ struct
 
     fun ltExp (left, right, string) = Ex (
         if string
+        (* FIXME: there is not runtime function `stringLessThan` *)
         then F.externalCall ("stringLessThan", [unEx left, unEx right])
         else T.RELOP (T.LT, unEx left, unEx right)
     )
@@ -129,7 +136,7 @@ struct
 
     fun recordExp fields =
         let val a = T.TEMP (Temp.newtemp ())
-            val extCall = F.externalCall ("malloc", [T.CONST ((List.length fields) * F.wordSize)])
+            val extCall = F.externalCall ("allocRecord", [T.CONST ((List.length fields) * F.wordSize)])
             fun f ([], k) = []
             |   f (field::l, k) =
                 let val moveVal = T.MOVE (T.mem (a, T.CONST k), unEx field)
@@ -184,39 +191,41 @@ struct
                 T.TEMP ans))
         end
 
-    fun whileExp (test, body, breakLabel) =
-        let val b = unNx body
-            val beforeLabel = Temp.newlabel ()
-            val testBranch = branch test (beforeLabel, breakLabel)
+    fun whileExp (test, body) =
+        let val beforeLabel = Temp.newlabel ()
+            val afterLabel = Temp.newlabel ()
+            val b = unNx (body afterLabel)
+            val testBranch = branch test (beforeLabel, afterLabel)
         in
             Nx (T.seq [
                 testBranch,
                 T.LABEL beforeLabel,
                 b,
                 testBranch,
-                T.LABEL breakLabel
+                T.LABEL afterLabel
             ])
         end
 
-    fun forExp ((level, access), lo, hi, body, breakLabel) =
-        let val i = F.exp access (T.TEMP F.FP)
-            val hiReg = T.TEMP (Temp.newtemp ())
+    fun forExp ((level, access), lo, hi, body) =
+        let val beforeLabel = Temp.newlabel ()
+            val bodyLabel = Temp.newlabel ()
+            val afterLabel = Temp.newlabel ()
             val l = unEx lo
             val h = unEx hi
-            val b = unNx body
-            val beforeLabel = Temp.newlabel ()
-            val bodyLabel = Temp.newlabel ()
+            val b = unNx (body afterLabel)
+            val i = F.exp access (T.TEMP F.FP)
+            val hiReg = T.TEMP (Temp.newtemp ())
         in
             Nx (T.seq [
                 T.MOVE (i, l),
                 T.MOVE (hiReg, h),
-                T.CJUMP (T.RELOP (T.LE, i, hiReg), bodyLabel, breakLabel),
+                T.CJUMP (T.RELOP (T.LE, i, hiReg), bodyLabel, afterLabel),
                 T.LABEL beforeLabel,
                 T.MOVE (i, T.BINOP (T.PLUS, i, T.CONST 1)),
                 T.LABEL bodyLabel,
                 b,
-                T.CJUMP (T.RELOP (T.LT, i, hiReg), bodyLabel, breakLabel),
-                T.LABEL breakLabel])
+                T.CJUMP (T.RELOP (T.LT, i, hiReg), bodyLabel, afterLabel),
+                T.LABEL afterLabel])
         end
 
     fun breakExp label = Nx (T.JUMP (T.NAME label, [label]))
@@ -240,11 +249,18 @@ struct
     fun fieldVar (a, i) = 
         let val addr = unEx a
         in
-            ifThenElseExp (
-                Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
-                Ex (F.externalCall ("nilPointer", [])),
-                Ex (T.mem (addr, T.CONST (i * F.wordSize)))
-            )
+            Ex (T.ESEQ (
+                unNx (ifThenExp (
+                    Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
+                    (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
+                    Nx (T.seq [
+                        T.EXP (F.externalCall ("print", [T.NAME nilPointer])),
+                        T.EXP (F.externalCall ("flush", [])),
+                        T.EXP (F.externalCall ("exit", [T.CONST 1]))
+                    ])
+                )),
+                T.mem (addr, T.CONST (i * F.wordSize))
+            ))
         end
 
     fun subscriptVar (a, i) = 
@@ -252,15 +268,22 @@ struct
             val bound = T.mem (addr, T.CONST (~F.wordSize))
             val idx = unEx i
         in
-            ifThenElseExp (
-                ifThenElseExp (
-                    Ex (T.RELOP (T.GE, idx, T.CONST 0)),
-                    Ex (T.RELOP (T.LT, idx, bound)),
-                    Ex (T.CONST 0)
-                ),
-                Ex (T.mem (addr, T.BINOP (T.MUL, idx, T.CONST 4))),
-                Ex (F.externalCall ("indexOutOfBound", [idx, bound]))
-            )
+            Ex (T.ESEQ (
+                unNx (ifThenExp (
+                    ifThenElseExp (
+                        Ex (T.RELOP (T.LT, idx, T.CONST 0)),
+                        Ex (T.CONST 1),
+                        Ex (T.RELOP (T.GE, idx, bound))
+                    ),
+                    (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
+                    Nx (T.seq [
+                        T.EXP (F.externalCall ("print", [T.NAME indexOutOfBound])),
+                        T.EXP (F.externalCall ("flush", [])),
+                        T.EXP (F.externalCall ("exit", [T.CONST 1]))
+                    ])
+                )),
+                T.mem (addr, T.BINOP (T.MUL, idx, T.CONST 4))
+            ))
         end
 
     fun varDec ((level, access), value) = Nx (T.MOVE (F.exp access (T.TEMP F.FP), unEx value))

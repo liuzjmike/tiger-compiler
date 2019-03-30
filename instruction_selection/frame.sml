@@ -3,10 +3,12 @@ struct
     structure T = Tree
 
     type register = string
+    val zero' = Temp.newtemp ()
+    val zero = SOME zero'
     val FP = Temp.newtemp ()
     val RV = Temp.newtemp ()
     val specialregs = [
-        ("$zero", Temp.newtemp ()),
+        ("$zero", zero'),
         ("$at", Temp.newtemp ()),
         ("$v0", RV),
         ("$v1", Temp.newtemp ()),

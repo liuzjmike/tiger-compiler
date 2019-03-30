@@ -16,7 +16,7 @@ structure Assem = struct
   fun format saytemp =
     	let 
 				fun speak(assem,dst,src,jump) =
-	    			let 
+	    			let
 							val saylab = Symbol.name    
 							fun f(#"`":: #"s":: i::rest) = 
 		    					(explode(saytemp(List.nth(src,ord i - ord #"0"))) @ f rest)

@@ -1,5 +1,6 @@
 signature FRAME = sig
     type register = string
+    val zero: Temp.temp option
     val FP: Temp.temp
     val RV: Temp.temp
     val tempMap: register Temp.Table.table

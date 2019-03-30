@@ -7,6 +7,7 @@ struct
     val zero = SOME ZERO
     val RV = Temp.newtemp ()
     val FP = Temp.newtemp ()
+    val RA = Temp.newtemp ()
     val specialregs = [
         ("$zero", ZERO),
         ("$at", Temp.newtemp ()),
@@ -15,9 +16,9 @@ struct
         ("$gp", Temp.newtemp ()),
         ("$sp", Temp.newtemp ()),
         ("$fp", FP),
-        ("$ra", Temp.newtemp ())
+        ("$ra", RA)
     ]
-    val argregs = [
+    val argregs' = [
         ("$a0", Temp.newtemp ()),
         ("$a1", Temp.newtemp ()),
         ("$a2", Temp.newtemp ()),
@@ -47,11 +48,13 @@ struct
         ("$t8", Temp.newtemp ()),
         ("$t9", Temp.newtemp ())
     ]
+    val argregs = map #2 argregs'
+    val calldefs = [RV, RA] @ (map #2 callersaves)
     val tempMap =
         foldl (fn (l, m) => 
             foldl (fn ((name, t), m) => Temp.Table.enter (m, t, name)) m l)
         Temp.Table.empty
-        [specialregs, argregs, calleesaves, callersaves]
+        [specialregs, argregs', calleesaves, callersaves]
 
     val wordSize = 4 (* 32 bit *)
 
@@ -87,7 +90,7 @@ struct
         body @
         [Assem.OPER {
             assem="", dst=[], jump=SOME[],
-            src=map #2 (specialregs@calleesaves)
+            src=map #2 (specialregs @ calleesaves)
         }]
     fun procEntryExit3 ({name, formals, nLocal}, body) = {
         prolog="PROCEDURE " ^ Symbol.name name ^ "\n",

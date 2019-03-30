@@ -3,6 +3,8 @@ signature FRAME = sig
     val zero: Temp.temp option
     val RV: Temp.temp
     val FP: Temp.temp
+    val argregs: Temp.temp list
+    val calldefs: Temp.temp list
     val tempMap: register Temp.Table.table
     val wordSize: int
 

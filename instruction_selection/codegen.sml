@@ -36,16 +36,22 @@ struct
                 })
             |   munchStm (T.MOVE (T.MEM e1, e2)) =
                 emit (A.OPER {
-                    assem="assem=sw `s0, 0(`s1)\n",
+                    assem="sw `s0, 0(`s1)\n",
                     src=[munchExp e2, munchExp e1], dst=[], jump=NONE
                 })
             |   munchStm (T.MOVE (T.TEMP t, e)) =
                 emit (A.OPER {
-                    assem="assem=or `d0, `s0, $zero\n",
+                    assem="or `d0, `s0, $zero\n",
                     src=[munchExp e], dst=[t], jump=NONE
                 })
             |   munchStm (T.MOVE _) =
                 ErrorMsg.impossible "illegal move statement"
+            (* EXP *)
+            |   munchStm (T.EXP (T.CALL (T.NAME label, args))) =
+                emit (A.OPER {
+                    assem="jal " ^ Symbol.name label ^ "\n",
+                    src=munchArgs args, dst=Frame.calldefs, jump=NONE
+                })
             (* LABEL *)
             |   munchStm (T.LABEL label) =
                 emit (A.LABEL {assem=Symbol.name label ^ ":\n", lab=label})
@@ -195,6 +201,10 @@ struct
                     assem="sge `d0, `s0, `s1\n",
                     src=[munchExp e1, munchExp e2], dst=[r], jump=NONE
                 }))
+            |   munchExp (T.CALL (T.NAME label, args)) = (
+                munchStm (T.EXP (T.CALL (T.NAME label, args)));
+                Frame.RV
+            )
             (* CONST *)
             |   munchExp (T.CONST 0) = zero
             |   munchExp (T.CONST c) =
@@ -204,6 +214,24 @@ struct
                 }))
             (* TEMP *)
             |   munchExp (T.TEMP t) = t
+
+            and munchArgs (args) =
+                let fun f (i, [], argregs) = List.take (
+                        Frame.argregs,
+                        Int.min(i, List.length Frame.argregs)
+                    )
+                    |   f (i, a::l, []) = (
+                        (* TODO: move arguments into the frame *)
+                        (* munchStm (T.MOVE (T.MEM (), a)); *)
+                        munchExp a;
+                        f (i+1, l, [])
+                    )
+                    |   f (i, a::l, r::rs) = (
+                        munchStm (T.MOVE (T.TEMP r, a));
+                        f (i+1, l, rs)
+                    )
+                in f (0, args, Frame.argregs)
+                end
         in rev (!ilist)
         end
 end

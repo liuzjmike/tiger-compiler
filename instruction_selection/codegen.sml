@@ -60,6 +60,8 @@ struct
                 }))
             |   munchExp (T.MEM (T.BINOP (T.PLUS, T.CONST c, e))) =
                 munchExp (T.MEM (T.BINOP (T.PLUS, e, T.CONST c)))
+            |   munchExp (T.MEM (T.BINOP (T.MINUS, e, T.CONST c))) =
+                munchExp (T.MEM (T.BINOP (T.PLUS, e, T.CONST (~c))))
             |   munchExp (T.MEM (T.CONST c)) =
                 result (fn r => emit (A.OPER {
                     assem="lw `d0, " ^ Int.toString c ^ "($zero)\n",
@@ -117,7 +119,7 @@ struct
             (* DIV *)
             |   munchExp (T.BINOP (T.DIV, T.CONST 0, e)) = zero
             |   munchExp (T.BINOP (T.DIV, T.CONST c1, T.CONST c2)) =
-                munchExp (T.CONST (c1 * c2))
+                munchExp (T.CONST (c1 div c2))
             |   munchExp (T.BINOP (T.DIV, e, T.CONST 1)) = munchExp e
             |   munchExp (T.BINOP (T.DIV, e, T.CONST (~1))) =
                 munchExp (T.BINOP (T.MINUS, T.CONST 0, e))

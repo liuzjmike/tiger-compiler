@@ -78,16 +78,19 @@ struct
         end
 
     fun callExp (args, caller, callee, label) =
-        let fun sameLevel ({parent=p1, frame=f1, id=i1}, {parent=p2, frame=f2, id=i2}) = i1 = i2
-            val calleeParent = #id (unLevel (#parent (unLevel callee)))
-            fun f ({parent, frame, id}, frameAddr) =
-                if id = calleeParent
-                then frameAddr
-                else f (unLevel parent, staticLink frame frameAddr)
-            val sl = f (unLevel caller, T.TEMP F.FP)
-        in
-            Ex (T.CALL (T.NAME label, sl::(map unEx args)))
-        end
+        case callee
+        of  Outermost => Ex (T.CALL (T.NAME label, map unEx args))
+        |   Level {parent, frame, id} =>
+            let fun sameLevel ({parent=p1, frame=f1, id=i1}, {parent=p2, frame=f2, id=i2}) = i1 = i2
+                val calleeParent = #id (unLevel (parent))
+                fun f ({parent, frame, id}, frameAddr) =
+                    if id = calleeParent
+                    then frameAddr
+                    else f (unLevel parent, staticLink frame frameAddr)
+                val sl = f (unLevel caller, T.TEMP F.FP)
+            in
+                Ex (T.CALL (T.NAME label, sl::(map unEx args)))
+            end
 
     fun plusExp (left, right) = Ex (T.BINOP (T.PLUS, unEx left, unEx right))
 

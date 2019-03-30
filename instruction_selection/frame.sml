@@ -3,15 +3,13 @@ struct
     structure T = Tree
 
     type register = string
-    val zero' = Temp.newtemp ()
-    val zero = SOME zero'
-    val FP = Temp.newtemp ()
+    val ZERO = Temp.newtemp ()
+    val zero = SOME ZERO
     val RV = Temp.newtemp ()
+    val FP = Temp.newtemp ()
     val specialregs = [
-        ("$zero", zero'),
+        ("$zero", ZERO),
         ("$at", Temp.newtemp ()),
-        ("$v0", RV),
-        ("$v1", Temp.newtemp ()),
         ("$k0", Temp.newtemp ()),
         ("$k1", Temp.newtemp ()),
         ("$gp", Temp.newtemp ()),
@@ -36,6 +34,8 @@ struct
         ("$s7", Temp.newtemp ())
     ]
     val callersaves = [
+        ("$v0", RV),
+        ("$v1", Temp.newtemp ()),
         ("$t0", Temp.newtemp ()),
         ("$t1", Temp.newtemp ()),
         ("$t2", Temp.newtemp ()),
@@ -83,6 +83,17 @@ struct
 
     (* TODO: Special treatment calls with more than 4 arguments *)
     fun procEntryExit1 (frame, body) = body
+    fun procEntryExit2 (frame, body) =
+        body @
+        [Assem.OPER {
+            assem="", dst=[], jump=SOME[],
+            src=map #2 (specialregs@calleesaves)
+        }]
+    fun procEntryExit3 ({name, formals, nLocal}, body) = {
+        prolog="PROCEDURE " ^ Symbol.name name ^ "\n",
+        body=body,
+        epilog="END " ^ Symbol.name name ^ "\n"
+    }
 
     datatype frag = PROC of {body: Tree.stm, frame: frame}
                   | STRING of Temp.label * string

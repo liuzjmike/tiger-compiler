@@ -2,3 +2,4 @@
 sml.json
 *.lex.*
 *.grm.*
+*.tig.s

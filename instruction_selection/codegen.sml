@@ -45,7 +45,7 @@ struct
                     src=munchExp e, dst=t
                 })
             |   munchStm (T.MOVE _) =
-                ErrorMsg.impossible "illegal move statement"
+                print "illegal move statement"
             (* JUMP *)
             |   munchStm (T.JUMP (T.NAME label, labs)) =
                 emit (A.OPER {
@@ -443,6 +443,8 @@ struct
                     )
                 in f (0, args, Frame.argregs)
                 end
-        in rev (!ilist)
+        in
+            munchStm stm;
+            rev (!ilist)
         end
 end

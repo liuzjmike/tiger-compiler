@@ -1,28 +1,18 @@
-fun test filename =
-    let val output = TextIO.openOut filename
-        fun writeFrag frag =
-            case frag
-            of  MipsFrame.PROC {body, frame} => (
-                TextIO.output (output, Symbol.name (MipsFrame.name frame) ^ "\n");
-                Printtree.printtree (output, body)
-            )
-            |   _ => ()
-        fun f n =
-            let val input = "../testcases/test" ^ Int.toString n ^ ".tig"
-                val testStr = "test " ^ Int.toString n ^ "\n"
+CM.make "sources.cm";
+
+fun test () =
+    let fun prependFolder filename = "../testcases/" ^ filename
+        fun testFiles n =
+            let val testFile = "test" ^ Int.toString n ^ ".tig"
             in
                 if n < 49
-                then (
-                    print (testStr);
-                    Main.main input;
-                    (print "\n"; f (n+1))
-                )
-                else (
-                    app writeFrag (Main.main input);
-                    ()
-                )
+                then testFile::(testFiles (n+1))
+                else []
             end
+        fun run filename = (
+            print (filename ^ "\n");
+            Main.compile (prependFolder filename)
+        )
     in
-        f 1;
-        TextIO.closeOut output
+        app run (["merge.tig", "queens.tig"] @ (testFiles 1))
     end

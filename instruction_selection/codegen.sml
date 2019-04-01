@@ -40,18 +40,76 @@ struct
                     src=[munchExp e2, munchExp e1], dst=[], jump=NONE
                 })
             |   munchStm (T.MOVE (T.TEMP t, e)) =
-                emit (A.OPER {
+                emit (A.MOVE {
                     assem="or `d0, `s0, $zero\n",
-                    src=[munchExp e], dst=[t], jump=NONE
+                    src=munchExp e, dst=t
                 })
             |   munchStm (T.MOVE _) =
                 ErrorMsg.impossible "illegal move statement"
+            (* JUMP *)
+            |   munchStm (T.JUMP (T.NAME label, labs)) =
+                emit (A.OPER {
+                    assem="j " ^ Symbol.name label ^ "\n",
+                    src=[], dst=[], jump=SOME labs
+                })
+            |   munchStm (T.JUMP (e, labs)) =
+                emit (A.OPER {
+                    assem="jr `s0\n",
+                    src=[munchExp e], dst=[], jump=SOME labs
+                })
+            (* CJUMP *)
+            |   munchStm (T.CJUMP (T.CONST 0, t, f)) =
+                munchStm (T.JUMP (T.NAME f, [f]))
+            |   munchStm (T.CJUMP (T.CONST c, t, f)) =
+                munchStm (T.JUMP (T.NAME t, [f]))
+            |   munchStm (T.CJUMP (T.RELOP (T.EQ, e1, e2), t, f)) =
+                emit (A.OPER {
+                    assem="beq `s0, `s1, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
+                })
+            |   munchStm (T.CJUMP (T.RELOP (T.NE, e1, e2), t, f)) =
+                emit (A.OPER {
+                    assem="bne `s0, `s1, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
+                })
+            |   munchStm (T.CJUMP (T.RELOP (T.LT, e1, e2), t, f)) =
+                emit (A.OPER {
+                    assem="bltz `s0, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp (T.BINOP (T.MINUS, e1, e2))], dst=[], jump=SOME [t, f]
+                })
+            |   munchStm (T.CJUMP (T.RELOP (T.LE, e1, e2), t, f)) =
+                emit (A.OPER {
+                    assem="blez `s0, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp (T.BINOP (T.MINUS, e1, e2))], dst=[], jump=SOME [t, f]
+                })
+            |   munchStm (T.CJUMP (T.RELOP (T.GT, e1, e2), t, f)) =
+                emit (A.OPER {
+                    assem="bgtz `s0, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp (T.BINOP (T.MINUS, e1, e2))], dst=[], jump=SOME [t, f]
+                })
+            |   munchStm (T.CJUMP (T.RELOP (T.GE, e1, e2), t, f)) =
+                emit (A.OPER {
+                    assem="bgez `s0, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp (T.BINOP (T.MINUS, e1, e2))], dst=[], jump=SOME [t, f]
+                })
+            |   munchStm (T.CJUMP (e, t, f)) =
+                emit (A.OPER {
+                    assem="bne `s0, $zero, " ^ Symbol.name t ^ "\n",
+                    src=[munchExp e], dst=[], jump=SOME [t, f]
+                })
             (* EXP *)
             |   munchStm (T.EXP (T.CALL (T.NAME label, args))) =
                 emit (A.OPER {
                     assem="jal " ^ Symbol.name label ^ "\n",
                     src=munchArgs args, dst=Frame.calldefs, jump=NONE
                 })
+            |   munchStm (T.EXP (T.CALL (e, args))) =
+                emit (A.OPER {
+                    assem="jal `s0\n",
+                    src=(munchExp e)::munchArgs args, dst=Frame.calldefs, jump=NONE
+                })
+            (* FIXME: other special cases for EXP? *)
+            |   munchStm (T.EXP e) = (munchExp e; ())
             (* LABEL *)
             |   munchStm (T.LABEL label) =
                 emit (A.LABEL {assem=Symbol.name label ^ ":\n", lab=label})
@@ -201,10 +259,17 @@ struct
                     assem="sge `d0, `s0, `s1\n",
                     src=[munchExp e1, munchExp e2], dst=[r], jump=NONE
                 }))
-            |   munchExp (T.CALL (T.NAME label, args)) = (
-                munchStm (T.EXP (T.CALL (T.NAME label, args)));
+            (* CALL *)
+            |   munchExp (T.CALL (e, args)) = (
+                munchStm (T.EXP (T.CALL (e, args)));
                 Frame.RV
             )
+            (* NAME *)
+            |   munchExp (T.NAME label) =
+                result (fn r => emit (A.OPER {
+                    assem="ori `d0, $zero, " ^ Symbol.name label ^ "\n",
+                    src=[], dst=[r], jump=NONE
+                }))
             (* CONST *)
             |   munchExp (T.CONST 0) = zero
             |   munchExp (T.CONST c) =

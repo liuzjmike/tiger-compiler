@@ -18,7 +18,7 @@ fun test filename =
                     (print "\n"; f (n+1))
                 )
                 else (
-                    map writeFrag (Main.main input);
+                    app writeFrag (Main.main input);
                     ()
                 )
             end

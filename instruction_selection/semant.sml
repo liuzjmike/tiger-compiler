@@ -340,7 +340,7 @@ struct
                             Tr.procEntryExit {level=funLevel, body=bodyExp}
                         end
                 in
-                    map transBody decList';
+                    app transBody decList';
                     {venv=venv', tenv=tenv, varDecs=varDecs}
                 end
             |   transDec (venv, tenv, A.VarDec {name, escape, typ=SOME (typ, typPos), init, pos}, varDecs) =

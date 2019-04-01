@@ -19,15 +19,15 @@ struct
 
     and traverseExp(env, d, exp) = 
         let fun trexp (A.VarExp var) = traverseVar(env, d, var)
-            |   trexp (A.CallExp {func, args, pos}) = (map trexp args; ())
+            |   trexp (A.CallExp {func, args, pos}) = (app trexp args; ())
             |   trexp (A.OpExp {left, oper=_, right, pos}) = (trexp left; trexp right; ())
             |   trexp (A.RecordExp {fields, typ, pos}) =
                 let fun f (id, exp, pos) = trexp exp
-                in map f fields; ()
+                in app f fields; ()
                 end
             |   trexp (A.SeqExp expList) =
                 let fun f (exp, pos) = trexp exp
-                in map f expList; ()
+                in app f expList; ()
                 end
             |   trexp (A.AssignExp {var, exp, pos}) = (traverseVar (env, d, var); trexp exp)
             |   trexp (A.IfExp {test, then', else', pos}) = (
@@ -57,7 +57,7 @@ struct
                     in traverseExp (foldl enterparam env params, d, body)
                     end
             in
-                map trfundec decList;
+                app trfundec decList;
                 env
             end
             |   trdec (A.VarDec {name, escape, typ=NONE, init, pos}, env) = (

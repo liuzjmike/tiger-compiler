@@ -13,10 +13,11 @@ struct
 
     val nilPointer = Temp.newlabel ()
     val indexOutOfBound = Temp.newlabel ()
-    val fragList: F.frag list ref = ref [
+    val defaultFragList = [
         F.STRING (nilPointer, "nil pointer"),
         F.STRING (indexOutOfBound, "array index out of bound")
     ]
+    val fragList: F.frag list ref = ref defaultFragList
 
     fun newLevel {parent, name, formals} = Level {
         parent=parent,
@@ -62,7 +63,12 @@ struct
         in fragList := frag::(!fragList)
         end
 
-    fun getResult () = !fragList
+    fun getResult () =
+        let val result = !fragList
+        in
+            fragList := defaultFragList;
+            result
+        end
 
     fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  frameAddr
 
@@ -255,7 +261,7 @@ struct
             Ex (T.ESEQ (
                 unNx (ifThenExp (
                     Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
-                    (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
+                    (* NOTE: can implement runtime function `nilPointer` in runtime.c instead *)
                     Nx (T.seq [
                         T.EXP (F.externalCall ("print", [T.NAME nilPointer])),
                         T.EXP (F.externalCall ("flush", [])),
@@ -273,11 +279,11 @@ struct
         in
             Ex (T.ESEQ (
                 unNx (ifThenExp (
-                    ifThenElseExp (
-                        Ex (T.RELOP (T.LT, idx, T.CONST 0)),
-                        Ex (T.CONST 1),
-                        Ex (T.RELOP (T.GE, idx, bound))
-                    ),
+                    Ex (T.BINOP (
+                        T.OR,
+                        T.RELOP (T.LT, idx, T.CONST 0),
+                        T.RELOP (T.GE, idx, bound)
+                    )),
                     (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
                     Nx (T.seq [
                         T.EXP (F.externalCall ("print", [T.NAME indexOutOfBound])),

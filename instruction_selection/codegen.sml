@@ -45,7 +45,7 @@ struct
                     src=munchExp e, dst=t
                 })
             |   munchStm (T.MOVE _) =
-                print "illegal move statement"
+                print "illegal move statement\n"
             (* JUMP *)
             |   munchStm (T.JUMP (T.NAME label, labs)) =
                 emit (A.OPER {

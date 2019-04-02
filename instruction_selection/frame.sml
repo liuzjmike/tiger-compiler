@@ -79,7 +79,7 @@ struct
 
     fun allocLocal {name, formals, nLocal} escape = newLocal escape nLocal
 
-    fun string (label, s) = Symbol.name label ^ ": .asciiz \"" ^ s ^ "\"\n"
+    fun string (label, s) = Symbol.name label ^ ": .asciiz \"" ^ String.toString s ^ "\"\n"
 
     fun exp (InReg r) frameAddr = T.TEMP r
     |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)

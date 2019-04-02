@@ -85,7 +85,7 @@ struct
     |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)
 
     (* TODO: Special treatment calls with more than 4 arguments *)
-    fun procEntryExit1 ({name, formals, nLocal}, body) = T.SEQ(T.LABEL name, body)
+    fun procEntryExit1 ({name, formals, nLocal}, body) = T.SEQ (T.LABEL name, body)
     fun procEntryExit2 (frame, body) =
         body @
         [Assem.OPER {

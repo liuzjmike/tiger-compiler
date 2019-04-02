@@ -66,42 +66,42 @@ struct
                 munchStm (T.CJUMP (boolToConst (c1 = c2), t, f))
             |   munchStm (T.CJUMP (T.RELOP (T.EQ, e1, e2), t, f)) =
                 emit (A.OPER {
-                    assem="beq `s0, `s1, " ^ Symbol.name t ^ "\n",
+                    assem="beq `s0, `s1, `j0\n",
                     src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
                 })
             |   munchStm (T.CJUMP (T.RELOP (T.NE, T.CONST c1, T.CONST c2), t, f)) =
                 munchStm (T.CJUMP (boolToConst (c1 <> c2), t, f))
             |   munchStm (T.CJUMP (T.RELOP (T.NE, e1, e2), t, f)) =
                 emit (A.OPER {
-                    assem="bne `s0, `s1, " ^ Symbol.name t ^ "\n",
+                    assem="bne `s0, `s1, `j0\n",
                     src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
                 })
             |   munchStm (T.CJUMP (T.RELOP (T.LT, T.CONST c1, T.CONST c2), t, f)) =
                 munchStm (T.CJUMP (boolToConst (c1 < c2), t, f))
             |   munchStm (T.CJUMP (T.RELOP (T.LT, e1, e2), t, f)) =
                 emit (A.OPER {
-                    assem="blt `s0, `s1" ^ Symbol.name t ^ "\n",
+                    assem="blt `s0, `s1, `j0\n",
                     src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
                 })
             |   munchStm (T.CJUMP (T.RELOP (T.LE, T.CONST c1, T.CONST c2), t, f)) =
                 munchStm (T.CJUMP (boolToConst (c1 <= c2), t, f))
             |   munchStm (T.CJUMP (T.RELOP (T.LE, e1, e2), t, f)) =
                 emit (A.OPER {
-                    assem="ble `s0, `s1" ^ Symbol.name t ^ "\n",
+                    assem="ble `s0, `s1, `j0\n",
                     src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
                 })
             |   munchStm (T.CJUMP (T.RELOP (T.GT, T.CONST c1, T.CONST c2), t, f)) =
                 munchStm (T.CJUMP (boolToConst (c1 > c2), t, f))
             |   munchStm (T.CJUMP (T.RELOP (T.GT, e1, e2), t, f)) =
                 emit (A.OPER {
-                    assem="bgt `s0, `s1" ^ Symbol.name t ^ "\n",
+                    assem="bgt `s0, `s1, `j0\n",
                     src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
                 })
             |   munchStm (T.CJUMP (T.RELOP (T.GE, T.CONST c1, T.CONST c2), t, f)) =
                 munchStm (T.CJUMP (boolToConst (c1 >= c2), t, f))
             |   munchStm (T.CJUMP (T.RELOP (T.GE, e1, e2), t, f)) =
                 emit (A.OPER {
-                    assem="bge `s0, `s1" ^ Symbol.name t ^ "\n",
+                    assem="bge `s0, `s1, `j0\n",
                     src=[munchExp e1, munchExp e2], dst=[], jump=SOME [t, f]
                 })
             |   munchStm (T.CJUMP (T.RELOP (T.ULT, T.CONST c1, T.CONST c2), t, f)) =
@@ -114,7 +114,7 @@ struct
                 munchStm (T.CJUMP (boolToConst (Word.>= (Word.fromInt c1, Word.fromInt c2)), t, f))
             |   munchStm (T.CJUMP (e, t, f)) =
                 emit (A.OPER {
-                    assem="bne `s0, $zero, " ^ Symbol.name t ^ "\n",
+                    assem="bne `s0, $zero, `j0\n",
                     src=[munchExp e], dst=[], jump=SOME [t, f]
                 })
             (* EXP *)

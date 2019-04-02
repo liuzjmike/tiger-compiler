@@ -15,6 +15,7 @@ struct
                 in gen t; t
                 end
             fun boolToConst b = T.CONST (if b then 1 else 0)
+            fun intToString i = if i < 0 then "-" ^ Int.toString (~i) else Int.toString i
             
             fun munchStm (T.SEQ (a, b)) = (munchStm a; munchStm b)
             (* MOVE *)
@@ -22,18 +23,20 @@ struct
                 munchStm (T.MOVE (T.MEM (T.CONST (c1 + c2)), e))
             |   munchStm (T.MOVE (T.MEM (T.BINOP (T.PLUS, e1, T.CONST c)), e2)) =
                 emit (A.OPER {
-                    assem="sw `s0, " ^ Int.toString c ^ "(`s1)\n",
+                    assem="sw `s0, " ^ intToString c ^ "(`s1)\n",
                     src=[munchExp e2, munchExp e1], dst=[], jump=NONE
                 })
             |   munchStm (T.MOVE (T.MEM (T.BINOP (T.PLUS, T.CONST c, e1)), e2)) =
                 munchStm (T.MOVE (T.MEM (T.BINOP (T.PLUS, e1, T.CONST c)), e2))
             |   munchStm (T.MOVE (T.MEM (T.BINOP (T.MINUS, e1, T.CONST c)), e2)) =
                 munchStm (T.MOVE (T.MEM (T.BINOP (T.PLUS, e1, T.CONST (~c))), e2))
-            |   munchStm (T.MOVE (T.MEM (T.CONST c), e)) =
+            |   munchStm (T.MOVE (T.MEM (T.CONST c), e)) = (
+                if c < 0 then ErrorMsg.impossible "negative memory address" else ();
                 emit (A.OPER {
                     assem="sw `s0, " ^ Int.toString c ^ "($zero)\n",
                     src=[munchExp e], dst=[], jump=NONE
                 })
+            )
             |   munchStm (T.MOVE (T.MEM e1, e2)) =
                 emit (A.OPER {
                     assem="sw `s0, 0(`s1)\n",
@@ -140,18 +143,20 @@ struct
                 munchExp (T.MEM (T.CONST (c1 + c2)))
             |   munchExp (T.MEM (T.BINOP (T.PLUS, e, T.CONST c))) =
                 result (fn r => emit (A.OPER {
-                    assem="lw `d0, " ^ Int.toString c ^ "(`s0)\n",
+                    assem="lw `d0, " ^ intToString c ^ "(`s0)\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.MEM (T.BINOP (T.PLUS, T.CONST c, e))) =
                 munchExp (T.MEM (T.BINOP (T.PLUS, e, T.CONST c)))
             |   munchExp (T.MEM (T.BINOP (T.MINUS, e, T.CONST c))) =
                 munchExp (T.MEM (T.BINOP (T.PLUS, e, T.CONST (~c))))
-            |   munchExp (T.MEM (T.CONST c)) =
+            |   munchExp (T.MEM (T.CONST c)) = (
+                if c < 0 then ErrorMsg.impossible "negative memory address" else ();
                 result (fn r => emit (A.OPER {
                     assem="lw `d0, " ^ Int.toString c ^ "($zero)\n",
                     src=[], dst=[r], jump=NONE
                 }))
+            )
             |   munchExp (T.MEM e) =
                 result (fn r => emit (A.OPER {
                     assem="lw `d0, 0(`s0)\n",
@@ -164,7 +169,7 @@ struct
             |   munchExp (T.BINOP (T.PLUS, T.CONST 0, e)) = munchExp e
             |   munchExp (T.BINOP (T.PLUS, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="addi `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="addi `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.PLUS, T.CONST c, e)) =
@@ -184,10 +189,7 @@ struct
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.MINUS, e, T.CONST c)) =
-                result (fn r => emit (A.OPER {
-                    assem="addi `d0, `s0, " ^ Int.toString (~c) ^ "\n",
-                    src=[munchExp e], dst=[r], jump=NONE
-                }))
+                munchExp (T.BINOP (T.PLUS, e, T.CONST (~c)))
             |   munchExp (T.BINOP (T.MINUS, e1, e2)) =
                 result (fn r => emit (A.OPER {
                     assem="sub `d0, `s0, `s1\n",
@@ -226,7 +228,7 @@ struct
                 munchExp (T.CONST (Word.toInt (Word.andb (Word.fromInt c1, Word.fromInt c2))))
             |   munchExp (T.BINOP (T.AND, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="andi `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="andi `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.AND, T.CONST c, e)) =
@@ -241,7 +243,7 @@ struct
                 munchExp (T.CONST (Word.toInt (Word.orb (Word.fromInt c1, Word.fromInt c2))))
             |   munchExp (T.BINOP (T.OR, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="ori `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="ori `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.OR, T.CONST c, e)) =
@@ -256,7 +258,7 @@ struct
                 munchExp (T.CONST (Word.toInt (Word.<< (Word.fromInt c1, Word.fromInt c2))))
             |   munchExp (T.BINOP (T.LSHIFT, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="sll `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="sll `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.LSHIFT, e1, e2)) =
@@ -269,7 +271,7 @@ struct
                 munchExp (T.CONST (Word.toInt (Word.>> (Word.fromInt c1, Word.fromInt c2))))
             |   munchExp (T.BINOP (T.RSHIFT, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="srl `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="srl `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.RSHIFT, e1, e2)) =
@@ -282,7 +284,7 @@ struct
                 munchExp (T.CONST (Word.toInt (Word.~>> (Word.fromInt c1, Word.fromInt c2))))
             |   munchExp (T.BINOP (T.ARSHIFT, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="sra `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="sra `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.ARSHIFT, e1, e2)) =
@@ -295,7 +297,7 @@ struct
                 munchExp (T.CONST (Word.toInt (Word.xorb (Word.fromInt c1, Word.fromInt c2))))
             |   munchExp (T.BINOP (T.XOR, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="xori `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="xori `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.BINOP (T.XOR, T.CONST c, e)) =
@@ -326,7 +328,7 @@ struct
                 munchExp (boolToConst (c1 < c2))
             |   munchExp (T.RELOP (T.LT, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="slti `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="slti `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.RELOP (T.LT, e1, e2)) =
@@ -347,7 +349,7 @@ struct
                 munchExp (boolToConst (c1 > c2))
             |   munchExp (T.RELOP (T.GT, T.CONST c, e)) =
                 result (fn r => emit (A.OPER {
-                    assem="slti `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="slti `d0, `s0, " ^ intToString c ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.RELOP (T.GT, e1, e2)) =
@@ -368,7 +370,7 @@ struct
                 munchExp (boolToConst (Word.< (Word.fromInt c1, Word.fromInt c2)))
             |   munchExp (T.RELOP (T.ULT, e, T.CONST c)) =
                 result (fn r => emit (A.OPER {
-                    assem="sltiu `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="sltiu `d0, `s0, " ^ Word.fmt StringCvt.DEC (Word.fromInt c) ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.RELOP (T.ULT, e1, e2)) =
@@ -389,7 +391,7 @@ struct
                 munchExp (boolToConst (Word.> (Word.fromInt c1, Word.fromInt c2)))
             |   munchExp (T.RELOP (T.UGT, T.CONST c, e)) =
                 result (fn r => emit (A.OPER {
-                    assem="sltiu `d0, `s0, " ^ Int.toString c ^ "\n",
+                    assem="sltiu `d0, `s0, " ^ Word.fmt StringCvt.DEC (Word.fromInt c) ^ "\n",
                     src=[munchExp e], dst=[r], jump=NONE
                 }))
             |   munchExp (T.RELOP (T.UGT, e1, e2)) =
@@ -420,7 +422,7 @@ struct
             |   munchExp (T.CONST 0) = zero
             |   munchExp (T.CONST c) =
                 result (fn r => emit (A.OPER {
-                    assem="ori `d0, $zero, " ^ Int.toString c ^ "\n",
+                    assem="ori `d0, $zero, " ^ intToString c ^ "\n",
                     src=[], dst=[r], jump=NONE
                 }))
             (* TEMP *)

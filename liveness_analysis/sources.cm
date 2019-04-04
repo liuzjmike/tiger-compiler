@@ -16,7 +16,10 @@ frame.sig
 frame.sml
 funcgraph.sig
 funcgraph.sml
+liveness.sig
+liveness.sml
 main.sml
+makegraph.sml
 parse.sml
 printtree.sml
 semant.sml

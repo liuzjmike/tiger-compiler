@@ -30,14 +30,13 @@ struct
                     nextID := id + 1;
                     (graph, id, node)
                 end
-            fun addLabelNode (graph, label, labelMap) = (
+            fun addLabelNode (graph, label, labelMap) =
                 case Symbol.look (labelMap, label)
                 of  SOME node => (graph, Graph.getNodeID node, node, labelMap)
                 |   NONE =>
                     let val (graph, id, node) = newNode (graph, [], [], false)
                     in (graph, id, node, Symbol.enter (labelMap, label, node))
                     end
-            )
 
             (* Given an instruction, a graph and a map from label to node,
             adds a node associated with the instruction to the graph and

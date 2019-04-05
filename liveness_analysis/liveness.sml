@@ -17,8 +17,6 @@ struct
         tnode: Temp.temp -> Temp.temp Graph.node,
         moves: (Temp.temp Graph.node * Temp.temp Graph.node) list
     }
-    type live_set = Temp.temp Temp.Table.table
-    type live_map = live_set Table.table
 
     fun postOrderDFS (node, graph, visited, result) = (
         case Table.look (visited, node)
@@ -32,14 +30,22 @@ struct
             end
     )
 
-    fun interferenceGraph (flowGraph, nodeList) = 
-        let 
-            (* Reorders nodeList into post-order *)
-            fun foldNode1 (node, (list, visited)) =
-                let val (result, visited) = postOrderDFS (node, flowGraph, visited, [])
+    fun postOrderNodes graph =
+        let fun foldNode (node, (list, visited)) =
+                let val (result, visited) = postOrderDFS (node, graph, visited, [])
                 in (list @ result, visited)
                 end
-            val (postList, visited) = foldl foldNode1 ([], Table.empty) nodeList
+            val (nodeList, visited) = foldl foldNode ([], Table.empty) (MG.Graph.nodes graph)
+        in nodeList
+        end
+
+    fun iterToFixedPoint f init list =
+        let val (result, changed) = foldl f (init, false) list
+        in if changed then iterToFixedPoint f result list else result
+        end
+
+    fun interferenceGraph flowGraph = 
+        let val postList = postOrderNodes flowGraph
 
             (* Liveness analysis *)
             fun updateLiveness (node, (liveMap, changed)) =
@@ -63,11 +69,7 @@ struct
                         in (Table.enter (liveMap, node, (newLI, newLO)), true)
                         end
                 end
-            fun analyzeLiveness liveMap =
-                let val (liveMap, changed) = foldl updateLiveness (liveMap, false) postList
-                in if changed then analyzeLiveness liveMap else liveMap
-                end
-            val liveMap = analyzeLiveness Table.empty
+            val liveMap = iterToFixedPoint updateLiveness Table.empty postList
 
             (* Build interference graph *)
             fun addNode (graph, temp) =
@@ -78,9 +80,9 @@ struct
                     val (graph, node2) = addNode (graph, temp2)
                 in Graph.doubleEdge (graph, Graph.getNodeID node1, Graph.getNodeID node2)
                 end
-            fun foldNode2 (fnode, (graph, moves)) =
-                let val {def, use, ismove} = MG.Graph.nodeInfo fnode
-                    val (liveIn, liveOut) = valOf (Table.look (liveMap, fnode))
+            fun addInterference (flowNode, (graph, moves)) =
+                let val {def, use, ismove} = MG.Graph.nodeInfo flowNode
+                    val (liveIn, liveOut) = valOf (Table.look (liveMap, flowNode))
                     fun foldDef (def, graph) =
                         foldl
                         (fn (lo, graph) => addEdge (graph, def, lo))
@@ -101,7 +103,7 @@ struct
                         end
                     else (graph, moves)
                 end
-            val (graph, moves) = foldl foldNode2 (Graph.empty, []) nodeList
+            val (graph, moves) = foldl addInterference (Graph.empty, []) postList
         in (
             IGRAPH {
                 graph=graph,

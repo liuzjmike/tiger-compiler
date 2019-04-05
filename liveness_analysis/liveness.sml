@@ -11,6 +11,10 @@ struct
         type key = MG.nodeinfo MG.Graph.node
 		fun getInt node = MG.Graph.getNodeID node
     )
+    structure TempSet = BinarySetFn (
+        type ord_key = Temp.temp
+        fun compare (t1, t2) = Int.compare (Temp.tempID t1, Temp.tempID t2)
+    )
 
     datatype igraph = IGRAPH of {
         graph: Temp.temp Graph.graph,
@@ -39,6 +43,10 @@ struct
         in nodeList
         end
 
+    fun tempSetDelete (item, set) =
+        TempSet.delete (set, item)
+        handle NotFound => set
+
     fun iterToFixedPoint f init list =
         let val (result, changed) = foldl f (init, false) list
         in if changed then iterToFixedPoint f result list else result
@@ -52,20 +60,19 @@ struct
                 let val (oldLI, oldLO) =
                         case Table.look (liveMap, node)
                         of  SOME v => v
-                        |   NONE => (Temp.Table.empty, Temp.Table.empty)
+                        |   NONE => (TempSet.empty, TempSet.empty)
                     fun foldSucc (succ, liveOut) =
                         case Table.look (liveMap, succ)
-                        of  SOME (succLI, succLO) => Temp.Table.update (liveOut, succLI)
+                        of  SOME (succLI, succLO) => TempSet.union (liveOut, succLI)
                         |   NONE => liveOut
                     val newLO = foldl foldSucc oldLO (MG.Graph.succs' flowGraph node)
                 in
-                    if Temp.Table.equal (oldLO, newLO)
+                    if TempSet.equal (oldLO, newLO)
                     then (liveMap, changed)
                     else
                         let val {def, use, ismove} = MG.Graph.nodeInfo node
-                            val newLI = foldl Temp.Table.remove' newLO def
-                            val newLI = foldl (fn (use, liveIn) => Temp.Table.enter (liveIn, use, use))
-                                        newLI use
+                            val newLI = foldl tempSetDelete newLO def
+                            val newLI = foldl TempSet.add' newLI use
                         in (Table.enter (liveMap, node, (newLI, newLO)), true)
                         end
                 end
@@ -87,7 +94,7 @@ struct
                         foldl
                         (fn (lo, graph) => addEdge (graph, def, lo))
                         graph
-                        (Temp.Table.items liveOut)
+                        (TempSet.listItems liveOut)
                     val graph = foldl foldDef graph def
                 in
                     if ismove
@@ -110,7 +117,7 @@ struct
                 tnode=fn temp => Graph.getNode (graph, Temp.tempID temp),
                 moves=moves
             },
-            fn node => Temp.Table.items (#2 (valOf (Table.look (liveMap, node))))
+            fn node => TempSet.listItems (#2 (valOf (Table.look (liveMap, node))))
         )
         end
 

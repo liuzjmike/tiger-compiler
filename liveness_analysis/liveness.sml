@@ -3,17 +3,13 @@ struct
     structure MG = MakeGraph
     structure Graph = FuncGraph (
         struct
-            type ord_key = int
-            val compare = Int.compare
+            type ord_key = Temp.temp
+            val compare = Temp.compare
         end
     )
     structure Table = IntMapTable (
         type key = MG.nodeinfo MG.Graph.node
 		fun getInt node = MG.Graph.getNodeID node
-    )
-    structure TempSet = BinarySetFn (
-        type ord_key = Temp.temp
-        fun compare (t1, t2) = Int.compare (Temp.tempID t1, Temp.tempID t2)
     )
 
     datatype igraph = IGRAPH of {
@@ -43,10 +39,6 @@ struct
         in nodeList
         end
 
-    fun tempSetDelete (item, set) =
-        TempSet.delete (set, item)
-        handle NotFound => set
-
     fun iterToFixedPoint f init list =
         let val (result, changed) = foldl f (init, false) list
         in if changed then iterToFixedPoint f result list else result
@@ -60,19 +52,22 @@ struct
                 let val (oldLI, oldLO) =
                         case Table.look (liveMap, node)
                         of  SOME v => v
-                        |   NONE => (TempSet.empty, TempSet.empty)
+                        |   NONE => (Temp.Set.empty, Temp.Set.empty)
                     fun foldSucc (succ, liveOut) =
                         case Table.look (liveMap, succ)
-                        of  SOME (succLI, succLO) => TempSet.union (liveOut, succLI)
+                        of  SOME (succLI, succLO) => Temp.Set.union (liveOut, succLI)
                         |   NONE => liveOut
                     val newLO = foldl foldSucc oldLO (MG.Graph.succs' flowGraph node)
+                    fun tempSetDelete (item, set) =
+                        Temp.Set.delete (set, item)
+                        handle NotFound => set
                 in
-                    if TempSet.equal (oldLO, newLO)
+                    if Temp.Set.equal (oldLO, newLO)
                     then (liveMap, changed)
                     else
                         let val {def, use, ismove} = MG.Graph.nodeInfo node
                             val newLI = foldl tempSetDelete newLO def
-                            val newLI = foldl TempSet.add' newLI use
+                            val newLI = foldl Temp.Set.add' newLI use
                         in (Table.enter (liveMap, node, (newLI, newLO)), true)
                         end
                 end
@@ -80,7 +75,7 @@ struct
 
             (* Build interference graph *)
             fun addNode (graph, temp) =
-                (graph, Graph.getNode (graph, Temp.tempID temp))
+                (graph, Graph.getNode (graph, temp))
                 handle Graph.NoSuchNode id => Graph.addNode' (graph, id, temp)
             fun addEdge (graph, temp1, temp2) =
                 let val (graph, node1) = addNode (graph, temp1)
@@ -94,13 +89,13 @@ struct
                         foldl
                         (fn (lo, graph) => addEdge (graph, def, lo))
                         graph
-                        (TempSet.listItems liveOut)
+                        (Temp.Set.listItems liveOut)
                     val graph = foldl foldDef graph def
                 in
                     if ismove
                     then
-                        let val def = Temp.tempID (List.hd def)
-                            val use = Temp.tempID (List.hd use)
+                        let val def = List.hd def
+                            val use = List.hd use
                             val graph = Graph.removeEdge' (graph, {from=def, to=use})
                             val graph = Graph.removeEdge' (graph, {from=use, to=def})
                         in (
@@ -114,10 +109,10 @@ struct
         in (
             IGRAPH {
                 graph=graph,
-                tnode=fn temp => Graph.getNode (graph, Temp.tempID temp),
+                tnode=fn temp => Graph.getNode (graph, temp),
                 moves=moves
             },
-            fn node => TempSet.listItems (#2 (valOf (Table.look (liveMap, node))))
+            fn node => Temp.Set.listItems (#2 (valOf (Table.look (liveMap, node))))
         )
         end
 

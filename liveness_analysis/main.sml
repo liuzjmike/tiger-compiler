@@ -7,7 +7,7 @@ struct
   (* structure R = RegAlloc *)
 
   fun tempName t =
-    case Temp.Table.look (F.tempMap, t) of
+    case Temp.Map.find (F.tempMap, t) of
         SOME name => name
       | NONE => Temp.makestring t
 

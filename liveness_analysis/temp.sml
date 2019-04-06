@@ -4,12 +4,16 @@ struct
     type temp = int
     val temps = ref 100
     fun newtemp() = let val t = !temps in temps := t+1; t end
-    fun tempID temp = temp
-
-    structure Table = IntMapTable(type key = int
-				                  fun getInt n = n)
-
+    val compare = Int.compare
     fun makestring t = "t" ^ Int.toString t
+
+    structure TempOrd =
+    struct 
+        type ord_key = temp
+        val compare = compare
+    end
+    structure Set = SplaySetFn(TempOrd)
+    structure Map = SplayMapFn(TempOrd)
 
     type label = Symbol.symbol
 

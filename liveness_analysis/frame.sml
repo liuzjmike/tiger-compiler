@@ -52,8 +52,8 @@ struct
     val calldefs = [RV, RA] @ (map #2 callersaves)
     val tempMap =
         foldl (fn (l, m) => 
-            foldl (fn ((name, t), m) => Temp.Table.enter (m, t, name)) m l)
-        Temp.Table.empty
+            foldl (fn ((name, t), m) => Temp.Map.insert (m, t, name)) m l)
+        Temp.Map.empty
         [specialregs, argregs', calleesaves, callersaves]
 
     val wordSize = 4 (* 32 bit *)

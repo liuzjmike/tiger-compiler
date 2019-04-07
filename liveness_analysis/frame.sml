@@ -49,7 +49,7 @@ struct
         ("$t9", Temp.newtemp ())
     ]
     val argregs = map #2 argregs'
-    val calldefs = [RV, RA] @ (map #2 callersaves)
+    val calldefs = RA :: argregs @ (map #2 callersaves)
     val tempMap =
         foldl (fn (l, m) => 
             foldl (fn ((name, t), m) => Temp.Map.insert (m, t, name)) m l)

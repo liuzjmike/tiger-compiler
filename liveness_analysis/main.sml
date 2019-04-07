@@ -23,7 +23,14 @@ struct
           List.concat (map (MipsGen.codegen frame) stms')
         )
         val format0 = Assem.format(tempName)
-      in app (fn i => TextIO.output(out,format0 i)) instrs
+        val (fgraph, fnodes) = MakeGraph.instrs2graph instrs
+        val (igraph, inode2temp) = Liveness.interferenceGraph fgraph
+      in
+        app (fn i => TextIO.output(out,format0 i)) instrs;
+        TextIO.output(out,"Registers:\n");
+        Temp.Map.appi (fn(t,r)=>TextIO.output(out,"  " ^ r ^ " - " ^ Temp.makestring t ^ "\n")) F.tempMap;
+        MakeGraph.show (out, fgraph);
+        Liveness.show (out, igraph)
       end
     | emitproc out (F.STRING (lab,s)) = TextIO.output(out,F.string(lab,s))
 

@@ -87,10 +87,10 @@ sig
     val isAdjacent: 'a node * 'a node -> bool
 
     (* Debugging*)
-
-    (* Prints the graph. Give it a function
-    that says how to convert any given node's data into a
-    string, and it will print everything out *)
-    val printGraph:  ((nodeID * 'a) -> string) -> 'a graph  -> unit
+    (* Prints the graph. Give it a function that converts any given node's data
+    into a string and a boolean that indicates whether the graph is undirected.
+    It will print everything out *)
+    val writeGraph: TextIO.outstream -> ((nodeID * 'a) -> string) -> bool -> 'a graph  -> unit
+    val printGraph: ((nodeID * 'a) -> string) -> bool -> 'a graph -> unit
 
 end

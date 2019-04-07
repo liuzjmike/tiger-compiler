@@ -2,9 +2,9 @@ signature LIVENESS =
 sig
     structure Graph: FUNCGRAPH
     datatype igraph = IGRAPH of {
-        graph: Temp.temp Graph.graph,
-        tnode: Temp.temp -> Temp.temp Graph.node,
-        moves: (Temp.temp Graph.node * Temp.temp Graph.node) list
+        graph: unit Graph.graph,
+        tnode: Temp.temp -> unit Graph.node,
+        moves: (unit Graph.node * unit Graph.node) list
     }
 
     val interferenceGraph:

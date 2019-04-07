@@ -13,9 +13,9 @@ struct
     )
 
     datatype igraph = IGRAPH of {
-        graph: Temp.temp Graph.graph,
-        tnode: Temp.temp -> Temp.temp Graph.node,
-        moves: (Temp.temp Graph.node * Temp.temp Graph.node) list
+        graph: unit Graph.graph,
+        tnode: Temp.temp -> unit Graph.node,
+        moves: (unit Graph.node * unit Graph.node) list
     }
 
     fun postOrderDFS (node, graph, visited, result) = (
@@ -39,20 +39,24 @@ struct
         in nodeList
         end
 
-    fun iterToFixedPoint f init list =
-        let val (result, changed) = foldl f (init, false) list
-        in if changed then iterToFixedPoint f result list else result
-        end
-
     fun interferenceGraph flowGraph = 
         let val postList = postOrderNodes flowGraph
+            (* Debugging *)
+            (* fun printNode node = print (
+                Int.toString (MG.Graph.getNodeID node)
+                ^ " - "
+                ^ MG.stringify (MG.Graph.nodeInfo node)
+                ^ "\n"
+            )
+            val () = app printNode postList *)
 
             (* Liveness analysis *)
-            fun updateLiveness (node, (liveMap, changed)) =
-                let val (oldLI, oldLO) =
-                        case Table.look (liveMap, node)
-                        of  SOME v => v
-                        |   NONE => (Temp.Set.empty, Temp.Set.empty)
+            fun liveMapLook (m, n) =
+                case Table.look (m, n)
+                of  SOME v => v
+                |   NONE => (Temp.Set.empty, Temp.Set.empty)
+            fun updateLiveness first (node, (liveMap, changed)) =
+                let val (oldLI, oldLO) = liveMapLook (liveMap, node)
                     fun foldSucc (succ, liveOut) =
                         case Table.look (liveMap, succ)
                         of  SOME (succLI, succLO) => Temp.Set.union (liveOut, succLI)
@@ -62,21 +66,28 @@ struct
                         Temp.Set.delete (set, item)
                         handle NotFound => set
                 in
-                    if Temp.Set.equal (oldLO, newLO)
-                    then (liveMap, changed)
-                    else
+                    if first orelse not (Temp.Set.equal (oldLO, newLO))
+                    then
                         let val {def, use, ismove} = MG.Graph.nodeInfo node
                             val newLI = foldl tempSetDelete newLO def
                             val newLI = foldl Temp.Set.add' newLI use
-                        in (Table.enter (liveMap, node, (newLI, newLO)), true)
+                        in (
+                            Table.enter (liveMap, node, (newLI, newLO)),
+                            true
+                        )
                         end
+                    else (liveMap, changed)
                 end
-            val liveMap = iterToFixedPoint updateLiveness Table.empty postList
+            fun iterToFixedPoint first init input =
+                let val (result, changed) = foldl (updateLiveness first) (init, false) input
+                in if changed then iterToFixedPoint false result input else result
+                end
+            val liveMap = iterToFixedPoint true Table.empty postList
 
             (* Build interference graph *)
             fun addNode (graph, temp) =
                 (graph, Graph.getNode (graph, temp))
-                handle Graph.NoSuchNode id => Graph.addNode' (graph, id, temp)
+                handle Graph.NoSuchNode id => Graph.addNode' (graph, id, ())
             fun addEdge (graph, temp1, temp2) =
                 let val (graph, node1) = addNode (graph, temp1)
                     val (graph, node2) = addNode (graph, temp2)
@@ -84,12 +95,13 @@ struct
                 end
             fun addInterference (flowNode, (graph, moves)) =
                 let val {def, use, ismove} = MG.Graph.nodeInfo flowNode
-                    val (liveIn, liveOut) = valOf (Table.look (liveMap, flowNode))
+                    val (liveIn, liveOut) = liveMapLook (liveMap, flowNode)
+                    val outList = Temp.Set.listItems liveOut
                     fun foldDef (def, graph) =
                         foldl
-                        (fn (lo, graph) => addEdge (graph, def, lo))
+                        (fn (out, graph) => addEdge (graph, def, out))
                         graph
-                        (Temp.Set.listItems liveOut)
+                        outList
                     val graph = foldl foldDef graph def
                 in
                     if ismove
@@ -98,9 +110,11 @@ struct
                             val use = List.hd use
                             val graph = Graph.removeEdge' (graph, {from=def, to=use})
                             val graph = Graph.removeEdge' (graph, {from=use, to=def})
+                            val (graph, defNode) = addNode (graph, def)
+                            val (graph, useNode) = addNode (graph, use)
                         in (
                             graph,
-                            (Graph.getNode (graph, def), Graph.getNode (graph, use))::moves
+                            (defNode, useNode)::moves
                         )
                         end
                     else (graph, moves)
@@ -116,5 +130,15 @@ struct
         )
         end
 
-    fun show (outstream, IGRAPH {graph, tnode, moves}) = ()
+    fun show (outstream, IGRAPH {graph, tnode, moves}) =
+        let fun stringify (nid, _) = Temp.makestring nid
+            val stringifyNode = (Temp.makestring o Graph.getNodeID)
+            fun writeln x = TextIO.output (outstream, x ^ "\n")
+            fun writeMove (t1, t2) =
+                writeln ("  " ^ stringifyNode t1 ^ "<-" ^ stringifyNode t2)
+        in
+            Graph.writeGraph outstream stringify true graph;
+            writeln "Moves:";
+            app writeMove moves
+        end
 end

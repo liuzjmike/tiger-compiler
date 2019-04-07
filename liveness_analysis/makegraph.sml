@@ -3,6 +3,8 @@ sig
     structure Graph: FUNCGRAPH
     type nodeinfo = {def: Temp.temp list, use: Temp.temp list, ismove: bool}
     val instrs2graph: Assem.instr list -> nodeinfo Graph.graph * nodeinfo Graph.node list
+    val stringify: nodeinfo -> string
+    val show: TextIO.outstream * nodeinfo Graph.graph -> unit
 end =
 struct
     structure A = Assem
@@ -90,5 +92,22 @@ struct
                 foldl foldInstr (graph, [], dummyNode, Symbol.empty) instrList
             val graph = Graph.removeNode (graph, dummyNode)
         in (graph, List.rev nodeList)
+        end
+
+    fun stringify {def, use, ismove} =
+        let fun stringifyTemps [] ans = ans
+            |   stringifyTemps [a] ans = ans ^ Temp.makestring a
+            |   stringifyTemps (a::l) ans =
+                stringifyTemps l (ans ^ Temp.makestring a ^ ", ")
+        in 
+            "def: [" ^ stringifyTemps def ""
+            ^ "], use: [" ^ stringifyTemps use ""
+            ^ "], ismove: " ^ (if ismove then "true" else "false")
+        end
+
+    fun show (outstream, graph) =
+        let fun stringify' (nid, info) =
+                Int.toString nid ^ " - " ^ stringify info
+        in Graph.writeGraph outstream stringify' false graph
         end
 end

@@ -15,5 +15,7 @@ fun test () =
             print "\n"
         )
     in
-        app run ((testFiles 1) @ ["merge.tig", "queens.tig"])
+        app run ((testFiles 1) @ ["merge.tig", "queens.tig"]);
+        print "Registers:\n";
+        Temp.Map.appi (fn(t,r) => print ("  " ^ r ^ " - " ^ Temp.makestring t ^ "\n")) MipsFrame.tempMap
     end

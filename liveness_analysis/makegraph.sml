@@ -15,30 +15,17 @@ struct
         end
     )
     type nodeinfo = {def: Temp.temp list, use: Temp.temp list, ismove: bool}
+    datatype labelnode = Unknown of Graph.nodeID list
+                       | Node of Graph.nodeID
 
     fun instrs2graph instrList =
-        let val dummyNode = ~1
+        let val dummy = ~1
             val graph = Graph.addNode (
-                Graph.empty, dummyNode,
+                Graph.empty, dummy,
                 {def=[], use=[], ismove=false}
             )
-            val nextID = ref 0
-            fun newNode (graph, def, use, ismove) =
-                let val id = !nextID
-                    val (graph, node) = Graph.addNode' (
-                        graph, id, {def=def, use=use, ismove=ismove}
-                    )
-                in
-                    nextID := id + 1;
-                    (graph, id, node)
-                end
-            fun addLabelNode (graph, label, labelMap) =
-                case Symbol.look (labelMap, label)
-                of  SOME node => (graph, Graph.getNodeID node, node, labelMap)
-                |   NONE =>
-                    let val (graph, id, node) = newNode (graph, [], [], false)
-                    in (graph, id, node, Symbol.enter (labelMap, label, node))
-                    end
+            fun newNode (graph, id, def, use, ismove) =
+                Graph.addNode' (graph, id, {def=def, use=use, ismove=ismove})
 
             (* Given an instruction, a graph and a map from label to node,
             adds a node associated with the instruction to the graph and
@@ -47,50 +34,54 @@ struct
             the next instruction *)
             fun addNode (
                 A.OPER {assem, dst, src, jump=NONE},
-                graph, labelMap
+                graph, id, labelMap
             ) =
-                let val (graph, id, node) = newNode (graph, dst, src, false)
-                in (graph, id, node, labelMap, id)
+                let val (graph, node) = newNode (graph, id, dst, src, false)
+                in (graph, node, labelMap, id)
                 end
             |   addNode (
                 A.OPER {assem, dst, src, jump=SOME jump},
-                graph, labelMap
+                graph, id, labelMap
             ) =
-                let val (graph, id, node) = newNode (graph, dst, src, false)
-                    fun foldJumpLabel (label, (graph, jumpNodes, labelMap)) =
-                        let val (graph, id, node, labelMap) =
-                                addLabelNode (graph, label, labelMap)
-                        in (graph, id::jumpNodes, labelMap)
-                        end
-                    val (graph, jumpNodes, labelMap) =
-                        foldl foldJumpLabel (graph, [], labelMap) jump
-                    fun foldJumpNode (jumpNode, graph) =
-                        Graph.addEdge (graph, {
-                            from=id,
-                            to=jumpNode
-                        })
-                    val graph = foldl foldJumpNode graph jumpNodes
-                in (graph, id, node, labelMap, dummyNode)
+                let val (graph, node) = newNode (graph, id, dst, src, false)
+                    fun foldJump (label, (graph, labelMap)) =
+                        case Symbol.look (labelMap, label)
+                        of  NONE => (graph, Symbol.enter (labelMap, label, Unknown [id]))
+                        |   SOME (Unknown list) =>
+                            (graph, Symbol.enter (labelMap, label, Unknown (id::list)))
+                        |   SOME (Node node) =>
+                            (Graph.addEdge (graph, {from=id, to=node}), labelMap)
+                    val (graph, labelMap) =
+                        foldl foldJump (graph, labelMap) jump
+                in (graph, node, labelMap, dummy)
                 end
-            |   addNode (A.LABEL {assem, lab}, graph, labelMap) =
-                let val (graph, id, node, labelMap) = addLabelNode (graph, lab, labelMap)
-                in (graph, id, node, labelMap, id)
+            |   addNode (A.LABEL {assem, lab}, graph, id, labelMap) =
+                let val (graph, node) = newNode (graph, id, [], [], false)
+                    val (graph, labelMap) = case Symbol.look (labelMap, lab)
+                        of  NONE => (graph, Symbol.enter (labelMap, lab, Node id))
+                        |   SOME (Unknown list) =>
+                            let fun addEdge (fromID, graph) =
+                                Graph.addEdge (graph, {from=fromID, to=id})
+                            in (foldl addEdge graph list, Symbol.enter (labelMap, lab, Node id))
+                            end
+                        |   SOME (Node node) => ErrorMsg.impossible "duplicate label"
+                in (graph, node, labelMap, id)
                 end
-            |   addNode (A.MOVE {assem, dst, src}, graph, labelMap) =
-                let val (graph, id, node) = newNode (graph, [dst], [src], true)
-                in (graph, id, node, labelMap, id)
+            |   addNode (A.MOVE {assem, dst, src}, graph, id, labelMap) =
+                let val (graph, node) = newNode (graph, id, [dst], [src], true)
+                in (graph, node, labelMap, id)
                 end
-            fun foldInstr (instr, (graph, nodeList, parent, labelMap)) =
-                let val (graph, id, node, labelMap, nextParent) =
-                        addNode (instr, graph, labelMap)
+            fun foldInstr (instr, (graph, id, nodeList, parent, labelMap)) =
+                let val (graph, node, labelMap, nextParent) =
+                        addNode (instr, graph, id, labelMap)
                     val graph = Graph.addEdge (
                         graph, {from=parent, to=id}
                     )
-                in (graph, node::nodeList, nextParent, labelMap)
+                in (graph, id+1, node::nodeList, nextParent, labelMap)
                 end
-            val (graph, nodeList, lastNode, labelMap) =
-                foldl foldInstr (graph, [], dummyNode, Symbol.empty) instrList
-            val graph = Graph.removeNode (graph, dummyNode)
+            val (graph, id, nodeList, lastNode, labelMap) =
+                foldl foldInstr (graph, 0, [], dummy, Symbol.empty) instrList
+            val graph = Graph.removeNode (graph, dummy)
         in (graph, List.rev nodeList)
         end
 

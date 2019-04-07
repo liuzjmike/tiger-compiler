@@ -46,6 +46,10 @@ sig
     If the nodes involved do not exists, raises NoSuchNode *)
     val removeEdge': 'a graph * 'a edge -> 'a graph
 
+    (* Removes an edge. If the edge or nodes do not exist,
+    returns the graph unchanged. *)
+    val removeEdge'': 'a graph * 'a edge -> 'a graph
+
     (* Updates the data associated with a node, keeping the edges the same.
     Raises NoSuchNode if the node does not exist *)
     val changeNodeData: 'a graph * nodeID * 'a -> 'a graph

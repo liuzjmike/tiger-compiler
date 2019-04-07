@@ -19,6 +19,7 @@ struct
     type 'a graph = 'a node NodeMap.map
     type 'a edge = {from: nodeID, to: nodeID}
 
+    exception NotFound = LibBase.NotFound
     exception NoSuchNode of nodeID
     exception NoSuchEdge of nodeID * nodeID
 
@@ -26,7 +27,7 @@ struct
     fun getNode (g, nid) =
         case NodeMap.find (g,nid)
         of 	NONE => raise NoSuchNode nid
-        | 	SOME x=> x
+        | 	SOME x => x
     fun addNode (g, nid, d) = NodeMap.insert (g, nid, (nid, d, NodeSet.empty, NodeSet.empty))
     fun addNode' (g, nid, d) =
         let val n = (nid, d, NodeSet.empty, NodeSet.empty)
@@ -60,6 +61,8 @@ struct
         handle NotFound => raise NoSuchEdge(from,to)
     fun removeEdge' (g, {from, to}) = adjustSets (g, {from=from, to=to}, NodeSet.delete)
         handle NotFound => g
+    fun removeEdge'' (g, {from, to}) = adjustSets (g, {from=from, to=to}, NodeSet.delete)
+        handle _ => g
 
     fun doubleEdge (g, temp1, temp2) =
         case Key.compare (temp1, temp2)

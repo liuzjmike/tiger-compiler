@@ -108,8 +108,8 @@ struct
                     then
                         let val def = List.hd def
                             val use = List.hd use
-                            val graph = Graph.removeEdge' (graph, {from=def, to=use})
-                            val graph = Graph.removeEdge' (graph, {from=use, to=def})
+                            val graph = Graph.removeEdge'' (graph, {from=def, to=use})
+                            val graph = Graph.removeEdge'' (graph, {from=use, to=def})
                             val (graph, defNode) = addNode (graph, def)
                             val (graph, useNode) = addNode (graph, use)
                         in (

@@ -51,11 +51,11 @@ struct
                     checkComparisonOperands (expty1, expty2, pos)
                 end
 
-            fun checkUnit ({exp, ty}, pos) =
+            fun checkUnit ({exp, ty}, pos, msg) =
                 case ty
                 of  Ty.UNIT => exp
                 |   Ty.BOTTOM => exp
-                |   _ => (error pos "unit required"; exp)
+                |   _ => (error pos msg; exp)
 
             fun trexp (A.VarExp var) = #1 (trvar var)
             |   trexp A.NilExp = {exp=Tr.nilExp (), ty=Ty.NIL}
@@ -191,12 +191,18 @@ struct
                 end
             |   trexp (A.IfExp {test, then', else'=NONE, pos}) =
                 let val testExp = checkInt (trexp test, pos)
-                    val thenExp = checkUnit (trexp then', pos)
+                    val thenExp = checkUnit (
+                        trexp then', pos,
+                        "if-then expression of non-unit type"
+                    )
                 in {exp=Tr.ifThenExp (testExp, thenExp), ty=Ty.UNIT}
                 end
             |   trexp (A.WhileExp {test, body, pos}) =
                 let val testExp = checkInt (trexp test, pos)
-                    fun bodyExp breakLabel = checkUnit (transExp (venv, tenv, body, SOME breakLabel, level), pos)
+                    fun bodyExp breakLabel = checkUnit (
+                        transExp (venv, tenv, body, SOME breakLabel, level), pos,
+                        "while-loop body of non-unit type"
+                    )
                 in {exp=Tr.whileExp (testExp, bodyExp), ty=Ty.UNIT}
                 end
             |   trexp (A.ForExp {var, escape, lo, hi, body, pos}) =
@@ -206,7 +212,10 @@ struct
                     val venv' = S.enter (venv, var, E.VarEntry {
                         access=access, ty=Ty.INT, forIdx=true
                     })
-                    fun bodyExp breakLabel = checkUnit (transExp (venv', tenv, body, SOME breakLabel, level), pos)
+                    fun bodyExp breakLabel = checkUnit (
+                        transExp (venv', tenv, body, SOME breakLabel, level), pos,
+                        "for-loop body of non-unit type"
+                    )
                 in {exp=Tr.forExp (access, loExp, hiExp, bodyExp), ty=Ty.UNIT}
                 end
             |   trexp (A.BreakExp pos) = (

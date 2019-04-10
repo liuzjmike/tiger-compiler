@@ -130,7 +130,7 @@ struct
                 in
                     if undir
                     then (
-                        writeln (s ^ " ->");
+                        writeln (s ^ " -> Neighbors:");
                         writeSet (NodeSet.union (succs, preds))
                     )
                     else (

@@ -30,17 +30,8 @@ struct
             end
     )
 
-    fun postOrderNodes graph =
-        let fun foldNode (node, (list, visited)) =
-                let val (result, visited) = postOrderDFS (node, graph, visited, [])
-                in (list @ result, visited)
-                end
-            val (nodeList, visited) = foldl foldNode ([], Table.empty) (MG.Graph.nodes graph)
-        in nodeList
-        end
-
-    fun interferenceGraph flowGraph = 
-        let val postList = postOrderNodes flowGraph
+    fun interferenceGraph flowGraph firstInstr = 
+        let val (postList, visited) = postOrderDFS (firstInstr, flowGraph, Table.empty, [])
             (* Debugging *)
             (* fun printNode node = print (
                 Int.toString (MG.Graph.getNodeID node)

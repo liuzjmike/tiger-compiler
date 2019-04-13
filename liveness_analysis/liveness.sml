@@ -79,20 +79,23 @@ struct
             fun addNode (graph, temp) =
                 (graph, Graph.getNode (graph, temp))
                 handle Graph.NoSuchNode id => Graph.addNode' (graph, id, ())
-            fun addEdge (graph, temp1, temp2) =
-                let val (graph, node1) = addNode (graph, temp1)
-                    val (graph, node2) = addNode (graph, temp2)
-                in Graph.doubleEdge (graph, Graph.getNodeID node1, Graph.getNodeID node2)
+            (* NOTE: t1 must be in the graph *)
+            fun addEdge (graph, t1, t2) =
+                let val (graph, _) = addNode (graph, t2)
+                in Graph.doubleEdge (graph, t1, t2)
                 end
             fun addInterference (flowNode, (graph, moves)) =
                 let val {def, use, ismove} = MG.Graph.nodeInfo flowNode
                     val (liveIn, liveOut) = liveMapLook (liveMap, flowNode)
                     val outList = Temp.Set.listItems liveOut
                     fun foldDef (def, graph) =
-                        foldl
-                        (fn (out, graph) => addEdge (graph, def, out))
-                        graph
-                        outList
+                        let val (graph, _) = addNode (graph, def)
+                        in
+                            foldl
+                            (fn (out, graph) => addEdge (graph, def, out))
+                            graph
+                            outList
+                        end
                     val graph = foldl foldDef graph def
                 in
                     if ismove

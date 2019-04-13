@@ -114,6 +114,7 @@ struct
                     else (graph, moves)
                 end
             val (graph, moves) = foldl addInterference (Graph.empty, []) postList
+            (* TODO: maybe add interference between all system registers *)
         in (
             IGRAPH {
                 graph=graph,

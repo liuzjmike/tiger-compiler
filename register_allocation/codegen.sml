@@ -5,8 +5,6 @@ struct
 
     structure Frame = MipsFrame
 
-    val zero = valOf (Frame.zero)
-
     fun codegen frame stm =
         let val ilist = ref []
             fun emit x = ilist := x :: !ilist
@@ -176,8 +174,8 @@ struct
             |   munchExp (T.BINOP (T.MINUS, e1, e2)) =
                 result ("sub `d0, `s0, `s1\n", [munchExp e1, munchExp e2])
             (* MUL *)
-            |   munchExp (T.BINOP (T.MUL, e, T.CONST 0)) = zero
-            |   munchExp (T.BINOP (T.MUL, T.CONST 0, e)) = zero
+            |   munchExp (T.BINOP (T.MUL, e, T.CONST 0)) = Frame.ZERO
+            |   munchExp (T.BINOP (T.MUL, T.CONST 0, e)) = Frame.ZERO
             |   munchExp (T.BINOP (T.MUL, T.CONST c1, T.CONST c2)) =
                 munchExp (T.CONST (c1 * c2))
             |   munchExp (T.BINOP (T.MUL, e, T.CONST 1)) = munchExp e
@@ -189,7 +187,7 @@ struct
             |   munchExp (T.BINOP (T.MUL, e1, e2)) =
                 result ("mul `d0, `s0, `s1\n", [munchExp e1, munchExp e2])
             (* DIV *)
-            |   munchExp (T.BINOP (T.DIV, T.CONST 0, e)) = zero
+            |   munchExp (T.BINOP (T.DIV, T.CONST 0, e)) = Frame.ZERO
             |   munchExp (T.BINOP (T.DIV, T.CONST c1, T.CONST c2)) =
                 munchExp (T.CONST (Int.quot (c1, c2)))
             |   munchExp (T.BINOP (T.DIV, e, T.CONST 1)) = munchExp e
@@ -318,7 +316,7 @@ struct
             |   munchExp (T.NAME label) =
                 result ("ori `d0, $zero, " ^ Symbol.name label ^ "\n", [])
             (* CONST *)
-            |   munchExp (T.CONST 0) = zero
+            |   munchExp (T.CONST 0) = Frame.ZERO
             |   munchExp (T.CONST c) =
                 result ("ori `d0, $zero, " ^ intToString c ^ "\n", [])
             (* TEMP *)

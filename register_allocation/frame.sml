@@ -4,17 +4,13 @@ struct
 
     type register = string
     val ZERO = Temp.newtemp ()
-    val zero = SOME ZERO
     val RV = Temp.newtemp ()
+    val SP = Temp.newtemp ()
     val FP = Temp.newtemp ()
     val RA = Temp.newtemp ()
     val specialregs = [
         ("$zero", ZERO),
-        ("$at", Temp.newtemp ()),
-        ("$k0", Temp.newtemp ()),
-        ("$k1", Temp.newtemp ()),
-        ("$gp", Temp.newtemp ()),
-        ("$sp", Temp.newtemp ()),
+        ("$sp", SP),
         ("$fp", FP),
         ("$ra", RA)
     ]

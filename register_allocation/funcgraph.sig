@@ -28,6 +28,7 @@ sig
 
     (* Gets a particular node. Raises NoSuchNode if not found *)
     val getNode: 'a graph * nodeID -> 'a node
+    val getNode': 'a graph * nodeID -> 'a node option
 
     (* Pulls the info out of the node *)
     val nodeInfo: 'a node -> 'a

@@ -1,6 +1,6 @@
-structure MakeGraph :
+structure MakeGraph :>
 sig
-    structure Graph: FUNCGRAPH
+    structure Graph: FUNCGRAPH where type nodeID = int
     type nodeinfo = {def: Temp.temp list, use: Temp.temp list, ismove: bool}
     val instrs2graph: Assem.instr list -> nodeinfo Graph.graph * nodeinfo Graph.node list
     val stringify: nodeinfo -> string

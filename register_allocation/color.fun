@@ -9,28 +9,32 @@ struct
         initial, spillCost, registers
     } =
         let val nReg = Temp.Map.numItems initial
-            (* fun moveMapFind (moveMap, temp) =
-                case Temp.Map.Find (moveMap, temp)
-                of  SOME s => s
-                |   NONE => Temp.Set.empty
-            fun foldMove ((dst, src), moveMap) =
-                if dst = src then moveMap
-                else
-                    let val dstAdj
-                        val m = Temp.Map.insert (moveMap, dst, Temp.Set.add (moveMapFind)) *)
             fun foldNode (node, (spill, freeze, simplify)) =
                 let val temp = L.Graph.getNodeID node
                 in
                     case Temp.Map.find (initial, temp)
                     of  SOME _ => (spill, freeze, simplify)
                     |   NONE =>
-                        if L.Graph.outDegree node >= nReg
-                        then (
+                        if L.Graph.outDegree node < nReg
+                        then
+                            case L.Graph.getNode' (moves, temp)
+                            of  SOME _ => (
+                                spill, Temp.Set.add (freeze, temp),
+                                simplify
+                            )
+                            |   NONE => (
+                                spill, freeze,
+                                Temp.Set.add (simplify, temp)
+                            )
+                        else (
                             Temp.Set.add (spill, temp),
                             freeze, simplify
                         )
-                        else (spill, freeze, simplify)
                 end
+            val (spill, freeze, simplify) =
+                L.Graph.foldNodes foldNode
+                (Temp.Set.empty, Temp.Set.empty, Temp.Set.empty)
+                graph
         in
             (Frame.tempMap, [])
         end

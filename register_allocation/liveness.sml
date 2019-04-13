@@ -1,4 +1,4 @@
-structure Liveness : LIVENESS =
+structure Liveness :> LIVENESS =
 struct
     structure MG = MakeGraph
     structure Graph = FuncGraph (
@@ -108,10 +108,7 @@ struct
                 end
             val (graph, moves) = foldl addInterference (Graph.empty, Graph.empty) postList
         in (
-            IGRAPH {
-                graph=graph,
-                moves=moves
-            },
+            IGRAPH {graph=graph, moves=moves},
             fn node => Temp.Set.listItems (#2 (valOf (Table.look (liveMap, node))))
         )
         end

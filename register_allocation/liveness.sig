@@ -1,6 +1,6 @@
 signature LIVENESS =
 sig
-    structure Graph: FUNCGRAPH
+    structure Graph: FUNCGRAPH where type nodeID = Temp.temp
     datatype igraph = IGRAPH of {
         graph: unit Graph.graph,
         moves: unit Graph.graph

@@ -8,6 +8,7 @@ assem.sml
 canon.sml
 codegen.sig
 codegen.sml
+color.fun
 color.sig
 env.fun
 env.sig

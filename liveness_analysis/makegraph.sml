@@ -25,7 +25,7 @@ struct
                 {def=[], use=[], ismove=false}
             )
             fun newNode (graph, id, def, use, ismove) =
-                Graph.addNode' (graph, id, {def=def, use=use, ismove=ismove})
+                Graph.addNode (graph, id, {def=def, use=use, ismove=ismove})
 
             (* Given an instruction, a graph and a map from label to node,
             adds a node associated with the instruction to the graph and
@@ -36,14 +36,14 @@ struct
                 A.OPER {assem, dst, src, jump=NONE},
                 graph, id, labelMap
             ) =
-                let val (graph, node) = newNode (graph, id, dst, src, false)
-                in (graph, node, labelMap, id)
+                let val graph = newNode (graph, id, dst, src, false)
+                in (graph, labelMap, id)
                 end
             |   addNode (
                 A.OPER {assem, dst, src, jump=SOME jump},
                 graph, id, labelMap
             ) =
-                let val (graph, node) = newNode (graph, id, dst, src, false)
+                let val graph = newNode (graph, id, dst, src, false)
                     fun foldJump (label, (graph, labelMap)) =
                         case Symbol.look (labelMap, label)
                         of  NONE => (graph, Symbol.enter (labelMap, label, Unknown [id]))
@@ -53,10 +53,10 @@ struct
                             (Graph.addEdge (graph, {from=id, to=node}), labelMap)
                     val (graph, labelMap) =
                         foldl foldJump (graph, labelMap) jump
-                in (graph, node, labelMap, dummy)
+                in (graph, labelMap, dummy)
                 end
             |   addNode (A.LABEL {assem, lab}, graph, id, labelMap) =
-                let val (graph, node) = newNode (graph, id, [], [], false)
+                let val graph = newNode (graph, id, [], [], false)
                     val (graph, labelMap) = case Symbol.look (labelMap, lab)
                         of  NONE => (graph, Symbol.enter (labelMap, lab, Node id))
                         |   SOME (Unknown list) =>
@@ -65,24 +65,24 @@ struct
                             in (foldl addEdge graph list, Symbol.enter (labelMap, lab, Node id))
                             end
                         |   SOME (Node node) => ErrorMsg.impossible "duplicate label"
-                in (graph, node, labelMap, id)
+                in (graph, labelMap, id)
                 end
             |   addNode (A.MOVE {assem, dst, src}, graph, id, labelMap) =
-                let val (graph, node) = newNode (graph, id, [dst], [src], true)
-                in (graph, node, labelMap, id)
+                let val graph = newNode (graph, id, [dst], [src], true)
+                in (graph, labelMap, id)
                 end
-            fun foldInstr (instr, (graph, id, nodeList, parent, labelMap)) =
-                let val (graph, node, labelMap, nextParent) =
+            fun foldInstr (instr, (graph, id, parent, labelMap)) =
+                let val (graph, labelMap, nextParent) =
                         addNode (instr, graph, id, labelMap)
                     val graph = Graph.addEdge (
                         graph, {from=parent, to=id}
                     )
-                in (graph, id+1, node::nodeList, nextParent, labelMap)
+                in (graph, id+1, nextParent, labelMap)
                 end
-            val (graph, id, nodeList, lastNode, labelMap) =
-                foldl foldInstr (graph, 0, [], dummy, Symbol.empty) instrList
+            val (graph, id, lastNode, labelMap) =
+                foldl foldInstr (graph, 0, dummy, Symbol.empty) instrList
             val graph = Graph.removeNode (graph, dummy)
-        in (graph, List.rev nodeList)
+        in (graph, Graph.nodes graph)
         end
 
     fun stringify {def, use, ismove} =

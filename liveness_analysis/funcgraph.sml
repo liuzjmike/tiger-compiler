@@ -96,6 +96,7 @@ struct
     fun inDegree(_, _, _, p) = NodeSet.numItems p
     fun degree(_, _, s, p) = (NodeSet.numItems s) + (NodeSet.numItems p)
 
+    (* Returns all the nodes in increasing order of Key *)
     val nodes = NodeMap.listItems
     fun succs (_, _, s, _) = NodeSet.listItems s
     fun succs' g n = map (fn nid => getNode (g,nid)) (succs n)

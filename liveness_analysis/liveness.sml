@@ -26,7 +26,7 @@ struct
                 val result = node::result
                 fun foldSucc (succ, (result, visited)) =
                     postOrderDFS (succ, graph, visited, result)
-            in foldl foldSucc (result, visited) (MG.Graph.succs' graph node)
+            in MG.Graph.foldSuccs' graph foldSucc (result, visited) node
             end
     )
 
@@ -52,7 +52,7 @@ struct
                         case Table.look (liveMap, succ)
                         of  SOME (succLI, succLO) => Temp.Set.union (liveOut, succLI)
                         |   NONE => liveOut
-                    val newLO = foldl foldSucc oldLO (MG.Graph.succs' flowGraph node)
+                    val newLO = MG.Graph.foldSuccs' flowGraph foldSucc oldLO node
                     fun tempSetDelete (item, set) =
                         Temp.Set.delete (set, item)
                         handle NotFound => set

@@ -120,7 +120,7 @@ struct
 
     fun ltExp (left, right, string) = Ex (
         if string
-        (* FIXME: there is not runtime function `stringLessThan` *)
+        (* FIXME: add runtime function `stringLessThan` *)
         then F.externalCall ("stringLessThan", [unEx left, unEx right])
         else T.RELOP (T.LT, unEx left, unEx right)
     )

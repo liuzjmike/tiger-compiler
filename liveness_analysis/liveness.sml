@@ -15,7 +15,7 @@ struct
     datatype igraph = IGRAPH of {
         graph: unit Graph.graph,
         tnode: Temp.temp -> unit Graph.node,
-        moves: (unit Graph.node * unit Graph.node) list
+        moves: (Temp.temp * Temp.temp) list
     }
 
     fun postOrderDFS (node, graph, visited, result) = (
@@ -76,25 +76,19 @@ struct
             val liveMap = iterToFixedPoint true Table.empty postList
 
             (* Build interference graph *)
-            fun addNode (graph, temp) =
-                (graph, Graph.getNode (graph, temp))
-                handle Graph.NoSuchNode id => Graph.addNode' (graph, id, ())
-            (* NOTE: t1 must be in the graph *)
-            fun addEdge (graph, t1, t2) =
-                let val (graph, _) = addNode (graph, t2)
-                in Graph.doubleEdge (graph, t1, t2)
-                end
             fun addInterference (flowNode, (graph, moves)) =
                 let val {def, use, ismove} = MG.Graph.nodeInfo flowNode
                     val (liveIn, liveOut) = liveMapLook (liveMap, flowNode)
+                    (* FIXME: add def to outList? *)
                     val outList = Temp.Set.listItems liveOut
                     fun foldDef (def, graph) =
-                        let val (graph, _) = addNode (graph, def)
-                        in
-                            foldl
-                            (fn (out, graph) => addEdge (graph, def, out))
-                            graph
-                            outList
+                        let val graph = Graph.addNewNode (graph, def, ())
+                            fun addEdge (out, graph) =
+                                Graph.doubleEdge (
+                                    Graph.addNewNode (graph, out, ()),
+                                    def, out
+                                )
+                        in foldl addEdge graph outList
                         end
                     val graph = foldl foldDef graph def
                 in
@@ -104,17 +98,14 @@ struct
                             val use = List.hd use
                             val graph = Graph.removeEdge'' (graph, {from=def, to=use})
                             val graph = Graph.removeEdge'' (graph, {from=use, to=def})
-                            val (graph, defNode) = addNode (graph, def)
-                            val (graph, useNode) = addNode (graph, use)
                         in (
                             graph,
-                            (defNode, useNode)::moves
+                            (def, use)::moves
                         )
                         end
                     else (graph, moves)
                 end
             val (graph, moves) = foldl addInterference (Graph.empty, []) postList
-            (* TODO: maybe add interference between all system registers *)
         in (
             IGRAPH {
                 graph=graph,
@@ -127,10 +118,9 @@ struct
 
     fun show (outstream, IGRAPH {graph, tnode, moves}) =
         let fun stringify (nid, _) = Temp.makestring nid
-            val stringifyNode = (Temp.makestring o Graph.getNodeID)
             fun writeln x = TextIO.output (outstream, x ^ "\n")
             fun writeMove (t1, t2) =
-                writeln ("  " ^ stringifyNode t1 ^ "<-" ^ stringifyNode t2)
+                writeln ("  " ^ Temp.makestring t1 ^ "<-" ^ Temp.makestring t2)
         in
             Graph.writeGraph outstream stringify true graph;
             writeln "Moves:";

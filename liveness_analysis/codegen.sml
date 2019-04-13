@@ -131,7 +131,6 @@ struct
                     assem="jal `s0\n",
                     src=(munchExp e)::munchArgs args, dst=Frame.calldefs, jump=NONE
                 })
-            (* FIXME: other special cases for EXP? *)
             |   munchStm (T.EXP e) = (munchExp e; ())
             (* LABEL *)
             |   munchStm (T.LABEL label) =

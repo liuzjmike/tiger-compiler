@@ -25,7 +25,7 @@ struct
 
     val empty = NodeMap.empty
     fun getNode (g, nid) =
-        case NodeMap.find (g,nid)
+        case NodeMap.find (g, nid)
         of 	NONE => raise NoSuchNode nid
         | 	SOME x => x
     fun addNode (g, nid, d) = NodeMap.insert (g, nid, (nid, d, NodeSet.empty, NodeSet.empty))
@@ -34,6 +34,10 @@ struct
         val g' = NodeMap.insert (g, nid, n)
         in (g', n)
         end
+    fun addNewNode (g, nid, d) =
+        case NodeMap.find (g, nid)
+        of 	NONE => addNode (g, nid, d)
+        | 	SOME x => g
     fun changeNodeData (g, nid, d) =
         let val (_, _, s, p) = getNode (g, nid)
         in NodeMap.insert(g, nid, (nid, d, s, p))

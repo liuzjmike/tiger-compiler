@@ -4,7 +4,7 @@ sig
     datatype igraph = IGRAPH of {
         graph: unit Graph.graph,
         tnode: Temp.temp -> unit Graph.node,
-        moves: (unit Graph.node * unit Graph.node) list
+        moves: (Temp.temp * Temp.temp) list
     }
 
     val interferenceGraph:

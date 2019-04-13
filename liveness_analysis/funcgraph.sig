@@ -14,6 +14,8 @@ sig
     val addNode: 'a graph * nodeID * 'a -> 'a graph
     (* Adds a node, and returns it immediately w/ the new graph *)
     val addNode': 'a graph * nodeID * 'a -> 'a graph * 'a node
+    (* Adds a node if there is not a node with the same ID in the graph *)
+    val addNewNode: 'a graph * nodeID * 'a -> 'a graph
 
     (* Removes a node and all of its edges.
     Raises NoSuchNode if not present *)

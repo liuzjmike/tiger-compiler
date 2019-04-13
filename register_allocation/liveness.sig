@@ -3,8 +3,7 @@ sig
     structure Graph: FUNCGRAPH
     datatype igraph = IGRAPH of {
         graph: unit Graph.graph,
-        tnode: Temp.temp -> unit Graph.node,
-        moves: (Temp.temp * Temp.temp) list
+        moves: unit Graph.graph
     }
 
     val interferenceGraph:

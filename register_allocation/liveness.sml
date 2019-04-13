@@ -14,8 +14,7 @@ struct
 
     datatype igraph = IGRAPH of {
         graph: unit Graph.graph,
-        tnode: Temp.temp -> unit Graph.node,
-        moves: (Temp.temp * Temp.temp) list
+        moves: unit Graph.graph
     }
 
     fun postOrderDFS (node, graph, visited, result) = (
@@ -98,32 +97,33 @@ struct
                             val use = List.hd use
                             val graph = Graph.removeEdge'' (graph, {from=def, to=use})
                             val graph = Graph.removeEdge'' (graph, {from=use, to=def})
+                            val moves = Graph.addNewNode (moves, def, ())
+                            val moves = Graph.addNewNode (moves, use, ())
                         in (
                             graph,
-                            (def, use)::moves
+                            Graph.doubleEdge (moves, def, use)
                         )
                         end
                     else (graph, moves)
                 end
-            val (graph, moves) = foldl addInterference (Graph.empty, []) postList
+            val (graph, moves) = foldl addInterference (Graph.empty, Graph.empty) postList
         in (
             IGRAPH {
                 graph=graph,
-                tnode=fn temp => Graph.getNode (graph, temp),
                 moves=moves
             },
             fn node => Temp.Set.listItems (#2 (valOf (Table.look (liveMap, node))))
         )
         end
 
-    fun show (outstream, IGRAPH {graph, tnode, moves}) =
+    fun show (outstream, IGRAPH {graph, moves}) =
         let fun stringify (nid, _) = Temp.makestring nid
             fun writeln x = TextIO.output (outstream, x ^ "\n")
             fun writeMove (t1, t2) =
                 writeln ("  " ^ Temp.makestring t1 ^ "<-" ^ Temp.makestring t2)
         in
             Graph.writeGraph outstream stringify true graph;
-            writeln "Moves:";
-            app writeMove moves
+            TextIO.output (outstream, "Moves\n");
+            Graph.writeGraph outstream stringify true moves
         end
 end

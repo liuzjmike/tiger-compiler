@@ -110,6 +110,8 @@ struct
     fun adj (_, _, s, p) = NodeSet.listItems (NodeSet.union (s, p))
     fun adj' g n = map (fn nid => getNode (g, nid)) (adj n)
 
+    fun oneSucc (_, _, s, _) = NodeSet.find (fn _ => true) s
+
     fun getNodeID (n, _, _, _) = n
 
     fun remove(g,n) = removeNode(g, getNodeID n)
@@ -120,9 +122,8 @@ struct
     fun foldPreds f init (_, _, _, p) = NodeSet.foldl f init p
     fun foldPreds' g f init (_, _, _, p) = NodeSet.foldl (fn (nid,x) => f (getNode (g, nid), x)) init p
 
-    fun isAdjacent ((n1, _, s1, p1), (n2, _, s2, p2)) =
-        NodeSet.member (NodeSet.union (s1, p1), n2) orelse
-        NodeSet.member (NodeSet.union (s2, p2), n1)
+    fun isAdjacent ((n1, _, s1, p1), n2) =
+        NodeSet.member (NodeSet.union (s1, p1), n2)
 
     fun writeGraph outstream stringify undir g =
         let fun writeln x = TextIO.output (outstream, x ^ "\n")

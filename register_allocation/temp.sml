@@ -15,6 +15,10 @@ struct
     structure Set = SplaySetFn(TempOrd)
     structure Map = SplayMapFn(TempOrd)
 
+    fun setDelete (set, v) =
+        Set.delete (set, v)
+        handle NotFound => set
+
     type label = Symbol.symbol
 
     local structure F = Format

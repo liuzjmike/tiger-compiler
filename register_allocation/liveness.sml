@@ -52,14 +52,13 @@ struct
                         of  SOME (succLI, succLO) => Temp.Set.union (liveOut, succLI)
                         |   NONE => liveOut
                     val newLO = MG.Graph.foldSuccs' flowGraph foldSucc oldLO node
-                    fun tempSetDelete (item, set) =
-                        Temp.Set.delete (set, item)
-                        handle NotFound => set
                 in
                     if first orelse not (Temp.Set.equal (oldLO, newLO))
                     then
                         let val {def, use, ismove} = MG.Graph.nodeInfo node
-                            val newLI = foldl tempSetDelete newLO def
+                            val newLI =
+                                foldl (fn (v, set) => Temp.setDelete (set, v))
+                                newLO def
                             val newLI = foldl Temp.Set.add' newLI use
                         in (
                             Table.enter (liveMap, node, (newLI, newLO)),

@@ -62,15 +62,18 @@ sig
     (* Gets all the nodes (not in any particularly useful graph order) *)
     val nodes: 'a graph -> 'a node list
 
-    (* Gets all of the successors of the nodes *)
+    (* Gets all of the successors of the node *)
     val succs:  'a node -> nodeID list
     val succs': 'a graph -> 'a node -> 'a node list
-    (* Gets all of the predecessors of the nodes *)
+    (* Gets all of the predecessors of the node *)
     val preds:   'a node -> nodeID list
     val preds': 'a graph -> 'a node -> 'a node list
-    (* Gets all of the adjacent nodes of the nodes *)
+    (* Gets all of the adjacent nodes of the node *)
     val adj:  'a node -> nodeID list
     val adj': 'a graph -> 'a node -> 'a node list
+
+    (* Gets one successor of the node *)
+    val oneSucc: 'a node -> nodeID option
 
     (* Converts a node to a node id*)
     val getNodeID: 'a node -> nodeID
@@ -91,7 +94,7 @@ sig
     val foldPreds: ((nodeID * 'b) -> 'b) -> 'b -> 'a node -> 'b
     val foldPreds':'a graph -> (('a node * 'b) -> 'b) -> 'b -> 'a node -> 'b
 
-    val isAdjacent: 'a node * 'a node -> bool
+    val isAdjacent: 'a node * nodeID -> bool
 
     (* Debugging*)
     (* Prints the graph. Give it a function that converts any given node's data

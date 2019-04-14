@@ -68,7 +68,8 @@ struct
                 (Temp.Set.empty, Temp.Set.empty, Temp.Set.empty)
                 graph
 
-            fun getItem set = Temp.Set.find (fn _ => true) set
+            (* Simplify *)
+            fun getItem set = valOf (Temp.Set.find (fn _ => true) set)
             fun enableMoves (temp, (activeMoves, pendingMoves)) =
                 case G.getNode' (pendingMoves, temp)
                 of  NONE => (activeMoves, pendingMoves)
@@ -100,8 +101,9 @@ struct
                     in (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
                     end
                 else (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
-            fun simplify (temp, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
-                let val node = G.getNode (igraph, temp)
+            fun simplify (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
+                let val temp = getItem simplifySet
+                    val node = G.getNode (igraph, temp)
                     val igraph = G.removeNode (igraph, temp)
                     (* val moves = G.removeNode' (moves, temp) *)
                     val simplifySet = Temp.Set.delete (simplifySet, temp)
@@ -110,6 +112,33 @@ struct
                         (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) node
                 in (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
                 end
+
+            (* Unfreeze *)
+            fun unfreeze (igraph, pendingMoves, simplifySet, frozenSet, spillSet) =
+                let val temp = getItem frozenSet
+                    val simplifySet = Temp.Set.add (simplifySet, temp)
+                    val frozenSet = Temp.Set.delete (frozenSet, temp)
+                    val adj = G.succs (G.getNode (pendingMoves, temp))
+                    val pendingMoves = G.removeNode (pendingMoves, temp)
+                    fun foldAdj (t, (pendingMoves, simplifySet, frozenSet)) =
+                        if G.outDegree (G.getNode (pendingMoves, t)) = 0
+                        then
+                            let val pendingMoves = G.removeNode (pendingMoves, t)
+                            in
+                                if G.outDegree (G.getNode (igraph, t)) < nReg
+                                then (
+                                    pendingMoves,
+                                    Temp.Set.add (simplifySet, t),
+                                    Temp.Set.delete (frozenSet, t)
+                                )
+                                else (pendingMoves, simplifySet, frozenSet)
+                            end
+                        else (pendingMoves, simplifySet, frozenSet)
+                    val (pendingMoves, simplifySet, frozenSet) =
+                        foldl foldAdj (pendingMoves, simplifySet, frozenSet) adj
+                in (igraph, pendingMoves, simplifySet, frozenSet, spillSet)
+                end
+            
         in
             (Frame.tempMap, [])
         end

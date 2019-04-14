@@ -1,40 +1,115 @@
 functor Color (F : FRAME) : COLOR =
 struct
     structure Frame = F
-    structure L = Liveness
+    structure G = Liveness.Graph
     type allocation = Frame.register Temp.Map.map
+
+    (* fun buildWorklist (igraph, moves, initial) =
+        let val nReg = Temp.Map.numItems initial
+            fun foldNode (node, (spill, frozen, simplify)) =
+                let val temp = G.getNodeID node
+                in
+                    case Temp.Map.find (initial, temp)
+                    of  SOME _ => (spill, frozen, simplify)
+                    |   NONE =>
+                        if G.outDegree node < nReg
+                        then
+                            case G.getNode' (moves, temp)
+                            of  SOME _ => (
+                                spill, Temp.Set.add (frozen, temp),
+                                simplify
+                            )
+                            |   NONE => (
+                                spill, frozen,
+                                Temp.Set.add (simplify, temp)
+                            )
+                        else (
+                            Temp.Set.add (spill, temp),
+                            frozen, simplify
+                        )
+                end
+            in
+                G.foldNodes foldNode
+                (Temp.Set.empty, Temp.Set.empty, Temp.Set.empty)
+                igraph
+            end *)
 
     fun color {
         interference=Liveness.IGRAPH {graph, moves},
         initial, spillCost, registers
     } =
         let val nReg = Temp.Map.numItems initial
-            fun foldNode (node, (spill, freeze, simplify)) =
-                let val temp = L.Graph.getNodeID node
+
+            (* Build worklists *)
+            fun foldNode (node, (simplify, frozen, spill)) =
+                let val temp = G.getNodeID node
                 in
                     case Temp.Map.find (initial, temp)
-                    of  SOME _ => (spill, freeze, simplify)
+                    of  SOME _ => (simplify, frozen, spill)
                     |   NONE =>
-                        if L.Graph.outDegree node < nReg
+                        if G.outDegree node < nReg
                         then
-                            case L.Graph.getNode' (moves, temp)
+                            case G.getNode' (moves, temp)
                             of  SOME _ => (
-                                spill, Temp.Set.add (freeze, temp),
-                                simplify
+                                simplify, Temp.Set.add (frozen, temp),
+                                spill
                             )
                             |   NONE => (
-                                spill, freeze,
-                                Temp.Set.add (simplify, temp)
+                                Temp.Set.add (simplify, temp),
+                                frozen, spill
                             )
                         else (
-                            Temp.Set.add (spill, temp),
-                            freeze, simplify
+                            simplify, frozen,
+                            Temp.Set.add (spill, temp)
                         )
                 end
-            val (spill, freeze, simplify) =
-                L.Graph.foldNodes foldNode
+            val (spillSet, frozenSet, simplifySet) =
+                G.foldNodes foldNode
                 (Temp.Set.empty, Temp.Set.empty, Temp.Set.empty)
                 graph
+
+            fun getItem set = Temp.Set.find (fn _ => true) set
+            fun enableMoves (temp, (activeMoves, pendingMoves)) =
+                case G.getNode' (pendingMoves, temp)
+                of  NONE => (activeMoves, pendingMoves)
+                |   SOME node =>
+                    let val activeMoves = G.addNewNode (activeMoves, temp, ())
+                        fun foldAdj (t, moves) =
+                            G.doubleEdge (
+                                G.addNewNode (moves, t, ()),
+                                temp, t
+                            )
+                        val activeMoves = G.foldSuccs foldAdj activeMoves node
+                    in (activeMoves, G.removeNode (pendingMoves, temp))
+                    end
+            fun moveRelated (temp, activeMoves, pendingMoves) =
+                case (G.getNode' (activeMoves, temp), G.getNode' (pendingMoves, temp))
+                of  (NONE, NONE) => false
+                |   _ => true
+            fun adjustWorklist (node, (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)) =
+                if G.outDegree node = nReg - 1
+                then
+                    let val temp = G.getNodeID node
+                        val (activeMoves, pendingMoves) = enableMoves (temp, (activeMoves, pendingMoves))
+                        val (activeMoves, pendingMoves) = G.foldSuccs enableMoves (activeMoves, pendingMoves) node
+                        val spillSet = Temp.Set.delete (spillSet, temp)
+                        val (simplifySet, frozenSet) =
+                            if moveRelated (temp, activeMoves, pendingMoves)
+                            then (simplifySet, Temp.Set.add (frozenSet, temp))
+                            else (Temp.Set.add (simplifySet, temp), frozenSet)
+                    in (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
+                    end
+                else (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
+            fun simplify (temp, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
+                let val node = G.getNode (igraph, temp)
+                    val igraph = G.removeNode (igraph, temp)
+                    (* val moves = G.removeNode' (moves, temp) *)
+                    val simplifySet = Temp.Set.delete (simplifySet, temp)
+                    val (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
+                        G.foldSuccs' igraph adjustWorklist
+                        (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) node
+                in (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
+                end
         in
             (Frame.tempMap, [])
         end

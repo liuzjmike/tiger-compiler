@@ -7,48 +7,23 @@ struct
             val compare = Temp.compare
         end
     )
-    structure Table = IntMapTable (
-        type key = MG.nodeinfo MG.Graph.node
-		fun getInt node = MG.Graph.getNodeID node
-    )
 
     datatype igraph = IGRAPH of {
         graph: unit Graph.graph,
         moves: unit Graph.graph
     }
 
-    fun postOrderDFS (node, graph, visited, result) = (
-        case Table.look (visited, node)
-        of  SOME () => (result, visited)
-        |   NONE =>
-            let val visited = Table.enter (visited, node, ())
-                val result = node::result
-                fun foldSucc (succ, (result, visited)) =
-                    postOrderDFS (succ, graph, visited, result)
-            in MG.Graph.foldSuccs' graph foldSucc (result, visited) node
-            end
-    )
-
-    fun interferenceGraph flowGraph firstInstr = 
-        let val (postList, visited) = postOrderDFS (firstInstr, flowGraph, Table.empty, [])
-            (* Debugging *)
-            (* fun printNode node = print (
-                Int.toString (MG.Graph.getNodeID node)
-                ^ " - "
-                ^ MG.stringify (MG.Graph.nodeInfo node)
-                ^ "\n"
-            )
-            val () = app printNode postList *)
-
+    fun interferenceGraph flowGraph instrs =
+        let
             (* Liveness analysis *)
             fun liveMapLook (m, n) =
-                case Table.look (m, n)
+                case MG.NodeMap.find (m, n)
                 of  SOME v => v
                 |   NONE => (Temp.Set.empty, Temp.Set.empty)
             fun updateLiveness first (node, (liveMap, changed)) =
                 let val (oldLI, oldLO) = liveMapLook (liveMap, node)
                     fun foldSucc (succ, liveOut) =
-                        case Table.look (liveMap, succ)
+                        case MG.NodeMap.find (liveMap, succ)
                         of  SOME (succLI, succLO) => Temp.Set.union (liveOut, succLI)
                         |   NONE => liveOut
                     val newLO = MG.Graph.foldSuccs' flowGraph foldSucc oldLO node
@@ -61,7 +36,7 @@ struct
                                 newLO def
                             val newLI = foldl Temp.Set.add' newLI use
                         in (
-                            Table.enter (liveMap, node, (newLI, newLO)),
+                            MG.NodeMap.insert (liveMap, node, (newLI, newLO)),
                             true
                         )
                         end
@@ -71,7 +46,7 @@ struct
                 let val (result, changed) = foldl (updateLiveness first) (init, false) input
                 in if changed then iterToFixedPoint false result input else result
                 end
-            val liveMap = iterToFixedPoint true Table.empty postList
+            val liveMap = iterToFixedPoint true MG.NodeMap.empty instrs
 
             (* Build interference graph *)
             fun addInterference (flowNode, (graph, moves)) =
@@ -105,10 +80,10 @@ struct
                         end
                     else (graph, moves)
                 end
-            val (graph, moves) = foldl addInterference (Graph.empty, Graph.empty) postList
+            val (graph, moves) = foldl addInterference (Graph.empty, Graph.empty) instrs
         in (
             IGRAPH {graph=graph, moves=moves},
-            fn node => Temp.Set.listItems (#2 (valOf (Table.look (liveMap, node))))
+            fn node => Temp.Set.listItems (#2 (valOf (MG.NodeMap.find (liveMap, node))))
         )
         end
 

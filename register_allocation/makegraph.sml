@@ -1,10 +1,17 @@
 structure MakeGraph :>
 sig
-    structure Graph: FUNCGRAPH where type nodeID = int
+    structure Graph: FUNCGRAPH
     type nodeinfo = {def: Temp.temp list, use: Temp.temp list, ismove: bool}
-    val instrs2graph: Assem.instr list -> nodeinfo Graph.graph * nodeinfo Graph.node list
+    type node = nodeinfo Graph.node
+    type graph = nodeinfo Graph.graph
+    structure NodeMap: ORD_MAP where type Key.ord_key = node
+
+    (* Returns a flow graph with only reachable instructions, the reachable
+    instructions, a list of nodes in instruction order and a list a nodes in
+    DFS post order *)
+    val instrs2graph: Assem.instr list -> graph * Assem.instr list * node list * node list
     val stringify: nodeinfo -> string
-    val show: TextIO.outstream * nodeinfo Graph.graph -> unit
+    val show: TextIO.outstream * graph -> unit
 end =
 struct
     structure A = Assem
@@ -15,17 +22,48 @@ struct
         end
     )
     type nodeinfo = {def: Temp.temp list, use: Temp.temp list, ismove: bool}
+    type node = nodeinfo Graph.node
+    type graph = nodeinfo Graph.graph
+
+    structure NodeOrd =
+    struct 
+        type ord_key = node
+        fun compare (n1, n2) =
+            Int.compare (Graph.getNodeID n1, Graph.getNodeID n2)
+    end
+    structure NodeMap = SplayMapFn (NodeOrd)
+    structure Set = IntBinarySet
+
     datatype labelnode = Unknown of Graph.nodeID list
                        | Node of Graph.nodeID
 
+    fun postOrderDFS (node, graph, visited, result) =
+        let val id = Graph.getNodeID node
+        in
+            if Set.member (visited, id)
+            then (result, visited)
+            else
+                let val visited = Set.add (visited, id)
+                    val result = id::result
+                    fun foldSucc (succ, (result, visited)) =
+                        postOrderDFS (succ, graph, visited, result)
+                in Graph.foldSuccs' graph foldSucc (result, visited) node
+                end
+        end
+
     fun instrs2graph instrList =
-        let val dummy = ~1
+        let 
+            (* Build flow graph *)
+            val dummy = ~1
             val graph = Graph.addNode (
                 Graph.empty, dummy,
                 {def=[], use=[], ismove=false}
             )
             fun newNode (graph, id, def, use, ismove) =
-                Graph.addNode (graph, id, {def=def, use=use, ismove=ismove})
+                Graph.addNode (
+                    graph, id,
+                    {def=def, use=use, ismove=ismove}
+                )
 
             (* Given an instruction, a graph and a map from label to node,
             adds a node associated with the instruction to the graph and
@@ -82,7 +120,31 @@ struct
             val (graph, id, lastNode, labelMap) =
                 foldl foldInstr (graph, 0, dummy, Symbol.empty) instrList
             val graph = Graph.removeNode (graph, dummy)
-        in (graph, Graph.nodes graph)
+
+            (* Remove unreachable instructions *)
+            val (postList, visited) =
+                postOrderDFS (Graph.getNode (graph, 0), graph, Set.empty, [])
+            (* Debugging *)
+            (* fun printNode node = print (
+                Int.toString (MG.Graph.getNodeID node)
+                ^ " - "
+                ^ MG.stringify (MG.Graph.nodeInfo node)
+                ^ "\n"
+            )
+            val () = app printNode postList *)
+            fun foldInstr ((instr, node), (instrs, graph)) =
+                let val id = Graph.getNodeID node
+                in
+                    if Set.member (visited, id)
+                    then (instr::instrs, graph)
+                    else (instrs, Graph.removeNode (graph, id))
+                end
+            val (instrs, graph) =
+                foldl foldInstr ([], graph) (ListPair.zipEq (instrList, Graph.nodes graph))
+        in (
+            graph, List.rev instrs, Graph.nodes graph,
+            map (fn id => Graph.getNode (graph, id)) postList
+        )
         end
 
     fun stringify {def, use, ismove} =

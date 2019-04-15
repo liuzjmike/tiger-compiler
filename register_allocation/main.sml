@@ -22,9 +22,9 @@ struct
           frame,
           List.concat (map (MipsGen.codegen frame) stms')
         )
-        val format0 = Assem.format(tempName)
-        val (fgraph, fnodes) = MakeGraph.instrs2graph instrs
-        val (igraph, inode2temp) = Liveness.interferenceGraph fgraph (List.hd fnodes)
+        val format0 = Assem.format tempName
+        val (fgraph, instrs, fnodes, postNodes) = MakeGraph.instrs2graph instrs
+        val (igraph, _) = Liveness.interferenceGraph fgraph postNodes
       in
         app (fn i => TextIO.output(out,format0 i)) instrs;
         MakeGraph.show (out, fgraph);

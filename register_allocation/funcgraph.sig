@@ -80,6 +80,8 @@ sig
 
     (* Number of successors *)
     val outDegree: 'a node -> int
+    (* Number of successors. Raises NoSuchNode if not found *)
+    val outDegree': 'a graph * nodeID -> int
 
     (* Number of predecessors *)
     val inDegree: 'a node -> int

@@ -98,6 +98,7 @@ struct
     fun nodeInfo(_, x, _, _) = x
 
     fun outDegree(_, _, s, _) = NodeSet.numItems s
+    fun outDegree' x = outDegree (getNode x)
     fun inDegree(_, _, _, p) = NodeSet.numItems p
     fun degree(_, _, s, p) = (NodeSet.numItems s) + (NodeSet.numItems p)
 

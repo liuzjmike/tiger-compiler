@@ -17,7 +17,7 @@ struct
 
     fun setDelete (set, v) =
         Set.delete (set, v)
-        handle NotFound => set
+        handle LibBase.NotFound => set
 
     type label = Symbol.symbol
 

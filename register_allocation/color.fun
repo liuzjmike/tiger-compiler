@@ -157,7 +157,7 @@ struct
           end
 
       (* Unfreeze helpers *)
-      fun unfreezeNeighbors (temp, igraph, pendingMoves, simplifySet, frozenSet) =
+      fun unfreezeNeighbors (node, igraph, pendingMoves, simplifySet, frozenSet) =
         let
           fun foldAdj (t, (pendingMoves, simplifySet, frozenSet)) =
             (* We are only dealing with `pendingMoves` here because
@@ -177,8 +177,8 @@ struct
                 else (pendingMoves, simplifySet, frozenSet)
               end
             else (pendingMoves, simplifySet, frozenSet)
-        val adj = G.succs (G.getNode (pendingMoves, temp))
-        val pendingMoves = G.removeNode (pendingMoves, temp)
+        val adj = G.succs node
+        val pendingMoves = G.removeNode (pendingMoves, G.getNodeID node)
         in foldl foldAdj (pendingMoves, simplifySet, frozenSet) adj
         end
 
@@ -214,7 +214,10 @@ struct
             val simplifySet = Temp.Set.delete (simplifySet, temp)
             (* We do not need to adjust `activeMoves` and `pendingMoves` here because `temp` must not
             be in either of them *)
-          in removeTemp (temp, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
+          in removeTemp (
+            temp, fn (_, _, pendingMoves, simplifySet, frozenSet) => (pendingMoves, simplifySet, frozenSet),
+            igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet
+          )
           end
       and coalesce (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         let val activeMoves' = G.nodes activeMoves
@@ -292,17 +295,13 @@ struct
           )
           val (colorMap, spillMap) =
             simplify (igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
-          val (success, colorMap) = assignColor (node, igraph, colorMap)
         in
-          if success then (colorMap, spillMap)
-          else (
-            colorMap,
-            Temp.Map.insert (
-              spillMap,
-              v,
-              valOf (Temp.Map.find (spillMap, u))
-            )
-          )
+          case Temp.Map.find (colorMap, u) of
+            SOME color => (Temp.Map.insert (colorMap, v, color), spillMap)
+          | NONE =>
+              case Temp.Map.find (spillMap, u) of
+                SOME group => (colorMap, Temp.Map.insert (spillMap, v, group))
+              | NONE => ErrorMsg.impossible (Temp.makestring u ^ " is neither colored nor spilled")
         end
       and unfreeze (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         case getItem frozenSet of
@@ -312,11 +311,11 @@ struct
             val simplifySet = Temp.Set.add (simplifySet, temp)
             val frozenSet = Temp.Set.delete (frozenSet, temp)
             val (pendingMoves, simplifySet, frozenSet) =
-              unfreezeNeighbors (temp, igraph, pendingMoves, simplifySet, frozenSet)
+              unfreezeNeighbors (G.getNode (igraph, temp), igraph, pendingMoves, simplifySet, frozenSet)
           in simplify (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
           end
       and spill (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
-        if Temp.Set.equal (spillSet, Temp.Set.empty)
+        if Temp.Set.numItems spillSet = 0
         then (Temp.Map.empty, Temp.Map.empty)
         else
           let
@@ -334,15 +333,18 @@ struct
             else
               let
                 val spillSet = Temp.Set.delete (spillSet, spill')
-                val (pendingMoves, simplifySet, frozenSet) =
-                  unfreezeNeighbors (spill', igraph, pendingMoves, simplifySet, frozenSet)
-              in removeTemp (spill', igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
+              in removeTemp (
+                spill', unfreezeNeighbors, igraph, activeMoves,
+                pendingMoves, simplifySet, frozenSet, spillSet
+              )
               end
           end
-      and removeTemp (temp, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
+      and removeTemp (temp, afterRemove, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         let
           val node = G.getNode (igraph, temp)
           val igraph' = G.removeNode (igraph, temp)
+          val (pendingMoves, simplifySet, frozenSet) =
+            afterRemove (node, igraph', pendingMoves, simplifySet, frozenSet)
           val (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
             adjustWorklist (node, igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
           val (colorMap, spillMap) =

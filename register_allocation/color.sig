@@ -7,5 +7,5 @@ sig
         initial: allocation,
         spillCost: Temp.temp -> real,
         registers: Frame.register list
-    } -> allocation * Temp.temp list
+    } -> allocation * Temp.temp Temp.Map.map
 end

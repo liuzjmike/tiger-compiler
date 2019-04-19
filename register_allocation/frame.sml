@@ -51,6 +51,7 @@ struct
             foldl (fn ((name, t), m) => Temp.Map.insert (m, t, name)) m l)
         Temp.Map.empty
         [specialregs, argregs', calleesaves, callersaves]
+    val registers = Temp.Map.listItems tempMap
 
     val wordSize = 4 (* 32 bit *)
 

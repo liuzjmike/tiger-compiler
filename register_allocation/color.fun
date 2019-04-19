@@ -15,7 +15,8 @@ struct
     initial, spillCost, registers
   } =
     let
-      val nReg = Temp.Map.numItems initial
+      val nReg = List.length registers
+      (* TODO: put spillCost in a map ref *)
 
       (* Build worklists *)
       fun foldNode (node, (simplify, frozen, spill)) =
@@ -201,10 +202,6 @@ struct
             )
           | NONE => (false, colorMap)
         end
-      fun assignColor' (node, igraph, colorMap) =
-        let val (success, colorMap) = assignColor (node, igraph, colorMap)
-        in if success then colorMap else ErrorMsg.impossible "no available color"
-        end
 
       fun simplify (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         case getItem simplifySet of
@@ -226,7 +223,7 @@ struct
           then unfreeze (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
           else
             let
-              val u = List.hd (G.nodes activeMoves)
+              val u = List.hd activeMoves'
               val v = valOf (G.oneSucc u)
               val u = G.getNodeID u
               val (u, v) = case Temp.Map.find (initial, v)
@@ -355,7 +352,7 @@ struct
           else (colorMap, Temp.Map.insert (spillMap, temp, temp))
         end
     in
-      (Frame.tempMap, [])
+      simplify (graph, moves, G.empty, simplifySet, frozenSet, spillSet)
     end
 
 end

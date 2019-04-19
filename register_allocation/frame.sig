@@ -6,6 +6,7 @@ signature FRAME = sig
     val argregs: Temp.temp list
     val calldefs: Temp.temp list
     val tempMap: register Temp.Map.map
+    val registers: register list
     val wordSize: int
 
     val externalCall: string * Tree.exp list -> Tree.exp

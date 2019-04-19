@@ -19,12 +19,15 @@ struct
       (* TODO: put spillCost in a map ref *)
 
       (* Build worklists *)
+      fun precolored temp =
+        case Temp.Map.find (initial, temp) of
+          SOME _ => true
+        | NONE => false
       fun foldNode (node, (simplify, frozen, spill)) =
         let val temp = G.getNodeID node
         in
-          case Temp.Map.find (initial, temp) of
-            SOME _ => (simplify, frozen, spill)
-          | NONE =>
+          if precolored temp then (simplify, frozen, spill)
+          else
             if G.outDegree node < nReg
             then
               case G.getNode' (moves, temp) of
@@ -41,10 +44,19 @@ struct
               Temp.Set.add (spill, temp)
             )
         end
-      val (spillSet, frozenSet, simplifySet) =
+      val (simplifySet, frozenSet, spillSet) =
         G.foldNodes foldNode
         (Temp.Set.empty, Temp.Set.empty, Temp.Set.empty)
         graph
+      val () = print "Simplify set (worklist): "
+      val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) simplifySet
+      val () = print "\n"
+      val () = print "Frozen set (worklist): "
+      val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) frozenSet
+      val () = print "\n"
+      val () = print "Spill set (worklist): "
+      val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) spillSet
+      val () = print "\n"
 
       (* Simplify helpers *)
       fun getItem set = Temp.Set.find (fn _ => true) set
@@ -67,6 +79,17 @@ struct
         case (G.getNode' (activeMoves, temp), G.getNode' (pendingMoves, temp)) of
           (NONE, NONE) => false
         | _ => true
+      fun toLowerSet (temp, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
+        if precolored temp then (simplifySet, frozenSet, spillSet)
+        else
+          let
+            val spillSet = Temp.Set.delete (spillSet, temp)
+            val (simplifySet, frozenSet) =
+              if moveRelated (temp, activeMoves, pendingMoves)
+              then (simplifySet, Temp.Set.add (frozenSet, temp))
+              else (Temp.Set.add (simplifySet, temp), frozenSet)
+          in (simplifySet, frozenSet, spillSet)
+        end
       (* Should be called after `node` is removed from `igraph`.
       If a neighbor of `node` beomes low-degree, moves it from `spillSet` to `simplifySet`
       or `forzenSet` and enables the moves related to itself and its neighbors. *)
@@ -79,11 +102,8 @@ struct
                 val temp = G.getNodeID node
                 val (activeMoves, pendingMoves) = enableMoves (temp, (activeMoves, pendingMoves))
                 val (activeMoves, pendingMoves) = G.foldSuccs enableMoves (activeMoves, pendingMoves) node
-                val spillSet = Temp.Set.delete (spillSet, temp)
-                val (simplifySet, frozenSet) =
-                  if moveRelated (temp, activeMoves, pendingMoves)
-                  then (simplifySet, Temp.Set.add (frozenSet, temp))
-                  else (Temp.Set.add (simplifySet, temp), frozenSet)
+                val (simplifySet, frozenSet, spillSet) =
+                  toLowerSet (temp, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
               in (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
               end
             else (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
@@ -93,25 +113,25 @@ struct
         end
 
       (* Coalesce helpers *)
-      fun precolored temp =
-        case Temp.Map.find (initial, temp) of
-          SOME _ => true
-        | NONE => false
       (* Removes an unconnected node from the graph *)
       fun removeIsolated (graph, id) =
         if G.outDegree' (graph, id) = 0
         then G.removeNode (graph, id)
         else graph
       (* Attempts to move `temp` from `frozenSet` to `simplifySet`.
-      `temp` must be in `fronzenSet`. *)
+      `temp` must be in `frozenSet`. *)
       fun frozenToSimplify (temp, igraph, activeMoves, pendingMoves, simplifySet, frozenSet) =
+      (
+        print ("frozen to simplify: " ^ Temp.makestring temp ^ "\n");
         if not (precolored temp)
         andalso not (moveRelated (temp, activeMoves, pendingMoves))
         andalso G.outDegree' (igraph, temp) < nReg
         then (Temp.Set.add (simplifySet, temp), Temp.Set.delete (frozenSet, temp))
         else (simplifySet, frozenSet)
+      )
       fun george (u, v, igraph) =
         let
+          val () = print ("george " ^ Temp.makestring u ^ " " ^ Temp.makestring v ^ "\n")
           fun f (t, (ok, precoloredOK)) =
             let
               val node = G.getNode (igraph, t)
@@ -123,6 +143,7 @@ struct
               precoloredOK andalso (okHere orelse precolored t)
             )
             end
+          val vNode = G.getNode (igraph, v) handle G.NoSuchNode id => (print ("NoSuchNode " ^ Temp.makestring id ^ "\n"); raise G.NoSuchNode id)
         in G.foldSuccs f (true, true) (G.getNode (igraph, v))
         end
       fun briggs (u, v, igraph) =
@@ -151,44 +172,47 @@ struct
             val graph =
               G.foldSuccs (fn (t, g) => G.doubleEdge (g, u, t))
               graph node
-            val graph = G.removeNode (graph, v)
-          (* For our use cases here, this final `removeIsolated` is probably not
-          necessary. But just keeping it here for safety. *)
-          in removeIsolated (graph, u)
+          in G.removeNode (graph, v)
           end
 
       (* Unfreeze helpers *)
-      fun unfreezeNeighbors (node, igraph, pendingMoves, simplifySet, frozenSet) =
-        let
-          fun foldAdj (t, (pendingMoves, simplifySet, frozenSet)) =
-            (* We are only dealing with `pendingMoves` here because
-            `activeMoves` should be empty *)
-            if G.outDegree' (pendingMoves, t) = 0
-            then
-              (* Remove `t` from `pendingMoves` if it is not move-related anymore *)
-              let val pendingMoves = G.removeNode (pendingMoves, t)
-              in
-                (* If `t` is in `frozenSet` move it to `simplifySet` *)
-                if G.outDegree' (igraph, t) < nReg
-                then (
-                  pendingMoves,
-                  Temp.Set.add (simplifySet, t),
-                  Temp.Set.delete (frozenSet, t)
-                )
+      fun unfreezeNeighbors (temp, igraph, pendingMoves, simplifySet, frozenSet) =
+        case G.getNode' (pendingMoves, temp) of
+          NONE => (pendingMoves, simplifySet, frozenSet)
+        | SOME node =>
+            let
+              fun foldAdj (t, (pendingMoves, simplifySet, frozenSet)) =
+                (* We are only dealing with `pendingMoves` here because
+                `activeMoves` should be empty *)
+                if G.outDegree' (pendingMoves, t) = 0 andalso not (precolored t)
+                then
+                  (* Remove `t` from `pendingMoves` if it is not move-related anymore *)
+                  let val pendingMoves = G.removeNode (pendingMoves, t)
+                  in
+                    (* If `t` is in `frozenSet` move it to `simplifySet` *)
+                    if G.outDegree' (igraph, t) < nReg
+                    then (
+                      pendingMoves,
+                      Temp.Set.add (simplifySet, t),
+                      Temp.Set.delete (frozenSet, t)
+                    )
+                    else (pendingMoves, simplifySet, frozenSet)
+                  end
                 else (pendingMoves, simplifySet, frozenSet)
-              end
-            else (pendingMoves, simplifySet, frozenSet)
-        val adj = G.succs node
-        val pendingMoves = G.removeNode (pendingMoves, G.getNodeID node)
-        in foldl foldAdj (pendingMoves, simplifySet, frozenSet) adj
-        end
+            val adj = G.succs (G.getNode (pendingMoves, temp))
+            val pendingMoves = G.removeNode' (pendingMoves, temp)
+            in foldl foldAdj (pendingMoves, simplifySet, frozenSet) adj
+            end
 
       val colors = foldl Set.add' Set.empty registers
       fun assignColor (node, igraph, colorMap) =
         let
           fun foldSucc (t, avail) =
-            Set.delete (avail, valOf (Temp.Map.find (colorMap, t)))
-            handle LibBase.NotFound => avail
+            case Temp.Map.find (colorMap, t) of
+              NONE => avail
+            | SOME color =>
+              Set.delete (avail, color)
+              handle LibBase.NotFound => avail
           val availColor = G.foldSuccs foldSucc colors node
         in
           case Set.find (fn _ => true) availColor of
@@ -208,6 +232,9 @@ struct
           NONE => coalesce (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
         | SOME temp =>
           let
+            val () = print "Simplify set (simplify): "
+            val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) simplifySet
+            val () = print "\n"
             val simplifySet = Temp.Set.delete (simplifySet, temp)
             (* We do not need to adjust `activeMoves` and `pendingMoves` here because `temp` must not
             be in either of them *)
@@ -224,11 +251,10 @@ struct
           else
             let
               val u = List.hd activeMoves'
+              val () = print ("Coalesce: " ^ Temp.makestring (G.getNodeID u) ^ "\n")
               val v = valOf (G.oneSucc u)
               val u = G.getNodeID u
-              val (u, v) = case Temp.Map.find (initial, v)
-                of  SOME _ => (v, u)
-                |   NONE => (u, v)
+              val (u, v) = if precolored v then (v, u) else (u, v)
               val activeMoves = G.removeEdge (
                 G.removeEdge (activeMoves, {from=u, to=v}),
                 {from=v, to=u}
@@ -273,21 +299,34 @@ struct
         end
       and combine (u, v, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         let
+          val () = print ("combine " ^ Temp.makestring u ^ " " ^ Temp.makestring v ^ "\n")
           val node = G.getNode (igraph, v)
+          (* val () = Liveness.show (TextIO.stdOut, Liveness.IGRAPH {graph=igraph, moves=activeMoves}) *)
           val igraph' = combineNodes (igraph, u, v)
+          (* val () = Liveness.show (TextIO.stdOut, Liveness.IGRAPH {graph=igraph', moves=activeMoves}) *)
           val activeMoves = combineNodes (activeMoves, u, v)
           val pendingMoves = combineNodes (pendingMoves, u, v)
           (* `v` should not be in `simplifySet` *)
           val frozenSet = Temp.setDelete (frozenSet, v)
           val spillSet = Temp.setDelete (spillSet, v)
+          (* val () = print "Simplify set (combine0): "
+          val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) simplifySet
+          val () = print "\n" *)
           val (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
             adjustWorklist (node, igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
+          (* val () = print "Spill set (combine1): "
+          val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) spillSet
+          val () = print "\n" *)
           val (frozenSet, spillSet) =
-            if G.outDegree' (igraph', u) < nReg
+            if precolored u then (frozenSet, spillSet)
+            else if G.outDegree' (igraph', u) < nReg
             then (frozenSet, spillSet)
             else (Temp.setDelete (frozenSet, u), Temp.Set.add (spillSet, u))
+          (* val () = print "Spill set (combine2): "
+          val () = Temp.Set.app (fn t => print (Temp.makestring t ^ "  ")) spillSet
+          val () = print "\n" *)
           (* Since we just removed a move related to `u`, try to move it to `simplifySet` *)
-          val (fronzenSet, simplifySet) = frozenToSimplify (
+          val (simplifySet, frozenSet) = frozenToSimplify (
             u, igraph', activeMoves, pendingMoves, simplifySet, frozenSet
           )
           val (colorMap, spillMap) =
@@ -305,15 +344,16 @@ struct
           NONE => spill (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
         | SOME temp => 
           let
+            val () = print ("unfreeze: " ^ Temp.makestring temp ^ "\n")
             val simplifySet = Temp.Set.add (simplifySet, temp)
             val frozenSet = Temp.Set.delete (frozenSet, temp)
             val (pendingMoves, simplifySet, frozenSet) =
-              unfreezeNeighbors (G.getNode (igraph, temp), igraph, pendingMoves, simplifySet, frozenSet)
+              unfreezeNeighbors (temp, igraph, pendingMoves, simplifySet, frozenSet)
           in simplify (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
           end
       and spill (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         if Temp.Set.numItems spillSet = 0
-        then (Temp.Map.empty, Temp.Map.empty)
+        then (initial, Temp.Map.empty)
         else
           let
             fun selectSpill (temp, (curSpill, curMin)) =
@@ -338,10 +378,11 @@ struct
           end
       and removeTemp (temp, afterRemove, igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         let
+          val () = print ("remove " ^ Temp.makestring temp ^ "\n")
           val node = G.getNode (igraph, temp)
           val igraph' = G.removeNode (igraph, temp)
           val (pendingMoves, simplifySet, frozenSet) =
-            afterRemove (node, igraph', pendingMoves, simplifySet, frozenSet)
+            afterRemove (temp, igraph', pendingMoves, simplifySet, frozenSet)
           val (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
             adjustWorklist (node, igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
           val (colorMap, spillMap) =

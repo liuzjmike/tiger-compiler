@@ -2,14 +2,17 @@ structure Main =
 struct
 
   structure F = MipsFrame
-  structure Tr = Translate (MipsFrame)
+  structure Tr = Translate (F)
   structure Semant = Semant (Tr)
-  (* structure R = RegAlloc *)
+  structure R = RegAlloc (F)
 
-  fun tempName t =
-    case Temp.Map.find (F.tempMap, t) of
+  fun tempName allocation t =
+    case Temp.Map.find (allocation, t) of
         SOME name => name
-      | NONE => Temp.makestring t
+      | NONE =>
+        let val name = Temp.makestring t
+        in print (name ^ " not allocated\n"); name
+        end
 
   fun emitproc out (F.PROC{body,frame}) =
       let
@@ -22,20 +25,17 @@ struct
           frame,
           List.concat (map (MipsGen.codegen frame) stms')
         )
-        val format0 = Assem.format tempName
-        val (fgraph, instrs, fnodes, postNodes) = MakeGraph.instrs2graph instrs
-        val (igraph, _) = Liveness.interferenceGraph fgraph postNodes
+        val (instrs, allocation) = R.alloc (instrs, frame)
+        val format0 = Assem.format (tempName allocation)
       in
-        app (fn i => TextIO.output(out,format0 i)) instrs;
-        MakeGraph.show (out, fgraph);
-        Liveness.show (out, igraph)
+        app (fn i => TextIO.output(out,format0 i)) instrs
       end
     | emitproc out (F.STRING (lab,s)) = TextIO.output(out,F.string(lab,s))
 
   fun withOpenFile fname f = 
       let val out = TextIO.openOut fname
       in (f out before TextIO.closeOut out) 
-      handle e => (TextIO.closeOut out; raise e)
+      (* handle e => (TextIO.closeOut out; raise e) *)
       end
 
   fun compile filename = 

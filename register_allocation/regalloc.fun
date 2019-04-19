@@ -17,11 +17,10 @@ struct
       app printTemp temps
     end
 
-  fun alloc (instrs : Assem.instr list, frame: Frame.frame) =
+  fun alloc (instrs, frame) =
     let
       val (fgraph, instrs, fnodes, postNodes) = MakeGraph.instrs2graph instrs
       val (igraph, _) = Liveness.interferenceGraph fgraph postNodes
-
       val (allocation, spills) = C.color {
         interference=igraph,
         initial=F.tempMap,

@@ -71,11 +71,15 @@ struct
                             val use = List.hd use
                             val graph = Graph.removeEdge'' (graph, {from=def, to=use})
                             val graph = Graph.removeEdge'' (graph, {from=use, to=def})
-                            val moves = Graph.addNewNode (moves, def, ())
-                            val moves = Graph.addNewNode (moves, use, ())
                         in (
                             graph,
-                            Graph.doubleEdge (moves, def, use)
+                            if def = use then moves
+                            else Graph.doubleEdge (
+                                Graph.addNewNode (
+                                    Graph.addNewNode (moves, def, ()),
+                                    use, ()),
+                                def, use
+                            )
                         )
                         end
                     else (graph, moves)

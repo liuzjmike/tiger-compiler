@@ -52,6 +52,24 @@ struct
             fun addInterference (flowNode, (graph, moves)) =
                 let val {def, use, ismove} = MG.Graph.nodeInfo flowNode
                     val (liveIn, liveOut) = liveMapLook (liveMap, flowNode)
+                    val (liveOut, graph, moves) =
+                        if ismove
+                        then
+                            let val def = List.hd def
+                                val use = List.hd use
+                            in (
+                                Temp.setDelete (liveOut, use),
+                                Graph.addNewNode (graph, use, ()),
+                                if def = use then moves
+                                else Graph.doubleEdge (
+                                    Graph.addNewNode (
+                                        Graph.addNewNode (moves, def, ()),
+                                        use, ()),
+                                    def, use
+                                )
+                            )
+                            end
+                        else (liveOut, graph, moves)
                     (* FIXME: add def to outList? *)
                     val outList = Temp.Set.listItems liveOut
                     fun foldDef (def, graph) =
@@ -63,29 +81,7 @@ struct
                                 )
                         in foldl addEdge graph outList
                         end
-                    val graph = foldl foldDef graph def
-                in
-                    if ismove
-                    then
-                        let val def = List.hd def
-                            val use = List.hd use
-                            (* FIXME: if `def` and `use` interfere elsewhere, this might
-                            cause problem *)
-                            val graph = Graph.addNewNode (graph, use, ())
-                            val graph = Graph.removeEdge'' (graph, {from=def, to=use})
-                            val graph = Graph.removeEdge'' (graph, {from=use, to=def})
-                        in (
-                            graph,
-                            if def = use then moves
-                            else Graph.doubleEdge (
-                                Graph.addNewNode (
-                                    Graph.addNewNode (moves, def, ()),
-                                    use, ()),
-                                def, use
-                            )
-                        )
-                        end
-                    else (graph, moves)
+                in (foldl foldDef graph def, moves)
                 end
             val (graph, moves) = foldl addInterference (Graph.empty, Graph.empty) instrs
         in (

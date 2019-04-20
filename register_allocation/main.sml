@@ -6,14 +6,6 @@ struct
   structure Semant = Semant (Tr)
   structure R = RegAlloc (F)
 
-  fun tempName allocation t =
-    case Temp.Map.find (allocation, t) of
-        SOME name => name
-      | NONE =>
-        let val name = Temp.makestring t
-        in print (name ^ " not allocated\n"); name
-        end
-
   fun emitproc out (F.PROC{body,frame}) =
       let
         val _ = print ("emit " ^ F.name frame ^ "\n")
@@ -21,12 +13,13 @@ struct
         val stms = Canon.linearize body
         (* val _ = app (fn s => Printtree.printtree(out,s)) stms; *)
         val stms' = Canon.traceSchedule(Canon.basicBlocks stms)
+        val stms' = Canon.traceSchedule(Canon.basicBlocks stms)
         val instrs = MipsFrame.procEntryExit2 (
           frame,
           List.concat (map (MipsGen.codegen frame) stms')
         )
         val (instrs, allocation) = R.alloc (instrs, frame)
-        val format0 = Assem.format (tempName allocation)
+        val format0 = Assem.format (R.getRegister allocation)
       in
         app (fn i => TextIO.output(out,format0 i)) instrs
       end

@@ -81,8 +81,37 @@ struct
     fun exp (InReg r) frameAddr = T.TEMP r
     |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)
 
+    fun foldCallerSave ((r, t), (entryMoves, exitMoves)) =
+        let val temp = Temp.newtemp ()
+        in (
+            T.MOVE (T.TEMP temp, T.TEMP t) :: entryMoves,
+            T.MOVE (T.TEMP t, T.TEMP temp) :: exitMoves
+        )
+        end
+    val (entryMoves, exitMoves) = foldl foldCallerSave ([], []) (("$ra", RA)::calleesaves)
+    val entryMoves = T.seq (List.rev entryMoves)
+    val exitMoves = T.seq (List.rev exitMoves)
     (* TODO: Special treatment calls with more than 4 arguments *)
-    fun procEntryExit1 ({name, formals, nLocal}, body) = T.SEQ (T.LABEL name, body)
+    fun procEntryExit1 ({name, formals, nLocal}, body) =
+        (* FIXME: don't save static link unless necessary *)
+        let fun moveActuals (_, [], n) = []
+            |   moveActuals ([], a::formals, n) =
+                let val move = T.MOVE (
+                        exp a (T.TEMP FP),
+                        T.mem (T.TEMP FP, T.CONST n)
+                    )
+                in move :: moveActuals ([], formals, n + wordSize)
+                end
+            |   moveActuals (r::argregs, a::formals, n) =
+                T.MOVE (exp a (T.TEMP FP), T.TEMP r) :: moveActuals (argregs, formals, n)
+        in T.seq [
+            T.LABEL name,
+            entryMoves,
+            T.seq (moveActuals (argregs, formals, 0)),
+            body,
+            exitMoves
+        ]
+        end
     fun procEntryExit2 (frame, body) =
         body @
         [Assem.OPER {

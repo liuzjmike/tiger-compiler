@@ -69,6 +69,9 @@ struct
                     then
                         let val def = List.hd def
                             val use = List.hd use
+                            (* FIXME: if `def` and `use` interfere elsewhere, this might
+                            cause problem *)
+                            val graph = Graph.addNewNode (graph, use, ())
                             val graph = Graph.removeEdge'' (graph, {from=def, to=use})
                             val graph = Graph.removeEdge'' (graph, {from=use, to=def})
                         in (

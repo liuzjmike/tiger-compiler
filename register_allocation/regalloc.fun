@@ -11,11 +11,19 @@ struct
     let
       fun printTemp(temp) =
         case Temp.Map.find(allocations, temp) of
-          NONE => print("Cannot allocate: " ^ Temp.makestring(temp) ^ "\n")
-        | SOME x => print(Temp.makestring temp  ^ " -> " ^ x ^ "\n")
+          NONE => print ("Cannot allocate: " ^ Temp.makestring(temp) ^ "\n")
+        | SOME x => print (Temp.makestring temp  ^ " -> " ^ x ^ "\n")
     in
       app printTemp temps
     end
+
+  fun getRegister allocation temp =
+    case Temp.Map.find (allocation, temp) of
+      SOME name => name
+    | NONE =>
+      let val name = Temp.makestring temp
+      in print (name ^ " not allocated\n"); name
+      end
 
   fun alloc (instrs, frame) =
     let
@@ -27,7 +35,11 @@ struct
         spillCost=defaultSpillCost,
         registers=F.registers
       }
-    in
-      (instrs, allocation)
+      (* val () = Liveness.show (TextIO.stdOut, igraph) *)
+      val getRegister = getRegister allocation
+      fun filterInstr (Assem.MOVE {assem, dst, src}) =
+          getRegister dst <> getRegister src
+      |   filterInstr _ = true
+    in (List.filter filterInstr instrs, allocation)
     end
 end

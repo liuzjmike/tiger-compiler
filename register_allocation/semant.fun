@@ -295,8 +295,7 @@ struct
         let fun transDec (venv, tenv, A.FunctionDec decList, varDecs) =
                 let fun transparam {name, typ, escape, pos} = {
                         name=name,
-                        ty=transTy (tenv, typ, pos),
-                        escape=(!escape)
+                        ty=transTy (tenv, typ, pos)
                     }
                     fun addFunToEnv ({name, params, result, body, pos}, (venv, localEnv, decList)) =
                         let val resultTy = case result
@@ -334,13 +333,10 @@ struct
                     val (venv', localEnv, decList') = foldl addFunToEnv (venv, S.empty, []) decList
                     val decList' = List.rev decList'
                     fun transBody (params, result, body, pos, funLevel) =
-                        let fun enterparam ({name, ty, escape}, venv) = S.enter (
+                        let fun enterparam (({name, ty}, access), venv) = S.enter (
                                 venv, name,
-                                E.VarEntry {
-                                    access=Tr.allocLocal funLevel escape,
-                                    ty=ty, forIdx=false
-                            })
-                            val venv'' = foldl enterparam venv' params
+                                E.VarEntry {access=access, ty=ty, forIdx=false})
+                            val venv'' = foldl enterparam venv' (ListPair.zipEq (params, Tr.formals funLevel))
                             val {exp=bodyExp, ty=bodyTy} = transExp (venv'', tenv, body, NONE, funLevel)
                         in
                             if canAccept (result, bodyTy)

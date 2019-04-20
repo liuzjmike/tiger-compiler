@@ -27,7 +27,7 @@ struct
 
     fun formals level = (
         case level
-        of  Level {parent, frame, id} => map (fn a => (level, a)) (F.formals frame)
+        of  Level {parent, frame, id} => map (fn a => (level, a)) (List.tl (F.formals frame))
         |   Outermost => ErrorMsg.impossible "access formals of the outermost level"
     )
 

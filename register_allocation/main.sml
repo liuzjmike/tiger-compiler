@@ -4,7 +4,7 @@ struct
   structure F = MipsFrame
   structure Tr = Translate (F)
   structure Semant = Semant (Tr)
-  structure R = RegAlloc (F)
+  structure R = RegAlloc (MipsGen)
 
   fun emitproc out (F.PROC{body,frame}) =
       let

@@ -91,9 +91,9 @@ struct
     val (entryMoves, exitMoves) = foldl foldCallerSave ([], []) (("$ra", RA)::calleesaves)
     val entryMoves = T.seq (List.rev entryMoves)
     val exitMoves = T.seq (List.rev exitMoves)
-    (* TODO: Special treatment calls with more than 4 arguments *)
+    (* TODO: special treatment calls with more than 4 arguments *)
     fun procEntryExit1 ({name, formals, nLocal}, body) =
-        (* FIXME: don't save static link unless necessary *)
+        (* TODO: don't save static link unless necessary *)
         let fun moveActuals (_, [], n) = []
             |   moveActuals ([], a::formals, n) =
                 let val move = T.MOVE (
@@ -112,6 +112,7 @@ struct
             exitMoves
         ]
         end
+
     fun procEntryExit2 (frame, body) =
         body @
         [Assem.OPER {

@@ -16,7 +16,16 @@ struct
   } =
     let
       val nReg = List.length registers
-      (* TODO: put spillCost in a map ref *)
+      val spillCost' = ref Temp.Map.empty
+      fun getSpillCost t =
+        case Temp.Map.find (!spillCost', t) of
+          SOME cost => cost
+        | NONE => spillCost t
+      fun combineSpillCost (t1, t2) =
+        spillCost' := Temp.Map.insert (
+          !spillCost', t1,
+          getSpillCost t1 + getSpillCost t2
+        )
 
       (* Build worklists *)
       fun precolored temp =
@@ -309,26 +318,27 @@ struct
             else if G.outDegree' (igraph', u) < nReg
             then (frozenSet, spillSet)
             else (Temp.setDelete (frozenSet, u), Temp.Set.add (spillSet, u))
+          val _ = combineSpillCost (u, v)
           (* Since we just removed a move related to `u`, try to move it to `simplifySet` *)
           val (simplifySet, frozenSet) = frozenToSimplify (
             u, igraph', activeMoves, pendingMoves, simplifySet, frozenSet
           )
-          val (colorMap, spillMap) =
+          val (colorMap, spills) =
             simplify (igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
         in
           case Temp.Map.find (colorMap, u) of
-            SOME color => (Temp.Map.insert (colorMap, v, color), spillMap)
+            SOME color => (Temp.Map.insert (colorMap, v, color), spills)
           | NONE =>
-              case Temp.Map.find (spillMap, u) of
-                SOME group => (colorMap, Temp.Map.insert (spillMap, v, group))
-              | NONE => ErrorMsg.impossible (Temp.makestring u ^ " is neither colored nor spilled")
+            if Temp.Set.member (spills, u)
+            then (colorMap, Temp.Set.add (spills, v))
+            else ErrorMsg.impossible (Temp.makestring u ^ " is neither colored nor spilled")
         end
       and unfreeze (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         case getItem frozenSet of
           NONE => spill (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
         | SOME temp => 
           let
-            val () = print ("unfreeze: " ^ Temp.makestring temp ^ "\n")
+            (* val () = print ("unfreeze: " ^ Temp.makestring temp ^ "\n") *)
             val simplifySet = Temp.Set.add (simplifySet, temp)
             val frozenSet = Temp.Set.delete (frozenSet, temp)
             val (pendingMoves, simplifySet, frozenSet) =
@@ -337,11 +347,11 @@ struct
           end
       and spill (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         if Temp.Set.numItems spillSet = 0
-        then (initial, Temp.Map.empty)
+        then (initial, Temp.Set.empty)
         else
           let
             fun selectSpill (temp, (curSpill, curMin)) =
-              let val cost = spillCost temp / Real.fromInt (G.outDegree' (igraph, temp))
+              let val cost = getSpillCost temp / Real.fromInt (G.outDegree' (igraph, temp))
               in
                 if cost < curMin
                 then (temp, cost)
@@ -369,15 +379,14 @@ struct
             afterRemove (temp, igraph', pendingMoves, simplifySet, frozenSet)
           val (activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
             adjustWorklist (node, igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
-          val (colorMap, spillMap) =
+          val (colorMap, spills) =
             simplify (igraph', activeMoves, pendingMoves, simplifySet, frozenSet, spillSet)
           val (success, colorMap) = assignColor (node, igraph, colorMap)
         in
-          if success then (colorMap, spillMap)
-          else (colorMap, Temp.Map.insert (spillMap, temp, temp))
+          if success then (colorMap, spills)
+          else (colorMap, Temp.Set.add (spills, temp))
         end
-    in
-      simplify (graph, moves, G.empty, simplifySet, frozenSet, spillSet)
+    in simplify (graph, moves, G.empty, simplifySet, frozenSet, spillSet)
     end
 
 end

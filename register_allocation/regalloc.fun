@@ -18,7 +18,6 @@ struct
     | NONE =>
       ErrorMsg.impossible (Temp.makestring temp ^ " not allocated\n")
 
-  (* TODO: save coalesced node to the same memory location? *)
   fun rewrite (instrs, frame, spillSet, costMap) =
     let
       fun makeMove x = List.rev (C.codegen frame (Tree.MOVE x))

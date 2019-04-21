@@ -116,7 +116,7 @@ struct
     fun procEntryExit2 (frame, body) =
         body @
         [Assem.OPER {
-            assem="", dst=[], jump=SOME [],
+            assem="jr $ra\n", dst=[], jump=SOME [],
             src=map #2 (specialregs @ calleesaves)
         }]
     fun procEntryExit3 ({name, formals, nLocal}, body) = {

@@ -18,43 +18,59 @@ struct
     | NONE =>
       ErrorMsg.impossible (Temp.makestring temp ^ " not allocated\n")
 
-  fun rewrite (instrs, frame, spillSet) =
+  (* TODO: save coalesced node to the same memory location? *)
+  fun rewrite (instrs, frame, spillSet, costMap) =
     let
       fun makeMove x = List.rev (C.codegen frame (Tree.MOVE x))
       fun fromStack (temp, mem) = makeMove (Tree.TEMP temp, mem)
       fun toStack (temp, mem) = makeMove (mem, Tree.TEMP temp)
-      fun foldTemp makeMove (temp, (moves, memMap)) =
+      fun foldTemp makeMove (temp, (temps, moves, memMap, costMap)) =
         if Temp.Set.member (spillSet, temp)
         then
-          case Temp.Map.find (memMap, temp) of
-            SOME mem => (
-              makeMove (temp, mem) @ moves,
-              memMap
-            )
-          | NONE =>
-            let
-              val mem = Frame.exp (Frame.allocLocal frame true) (Tree.TEMP Frame.FP)
-            in (
-              makeMove (temp, mem) @ moves,
-              Temp.Map.insert (memMap, temp, mem)
-            )
-            end
-        else (moves, memMap)
-      fun foldInstr (instr as Assem.OPER {assem, dst, src, jump}, (instrs, memMap)) =
+          let
+            val t = Temp.newtemp ()
+            val costMap = Temp.Map.insert (costMap, t, Real.posInf)
+          in
+            case Temp.Map.find (memMap, temp) of
+              SOME mem => (
+                t::temps,
+                makeMove (t, mem) @ moves,
+                memMap,
+                costMap
+              )
+            | NONE =>
+              let
+                val mem = Frame.exp (Frame.allocLocal frame true) (Tree.TEMP Frame.FP)
+              in (
+                t::temps,
+                makeMove (t, mem) @ moves,
+                Temp.Map.insert (memMap, temp, mem),
+                costMap
+              )
+              end
+          end
+        else (temp::temps, moves, memMap, costMap)
+      fun foldInstr (Assem.OPER {assem, dst, src, jump}, (instrs, memMap, costMap)) =
         let
-          val (loads, memMap) = foldl (foldTemp fromStack) ([], memMap) src
-          val (saves, memMap) = foldl (foldTemp toStack) ([], memMap) dst
-        in (saves @ instr :: loads @ instrs, memMap)
+          val (src, loads, memMap, costMap) =
+            foldl (foldTemp fromStack) ([], [], memMap, costMap) src
+          val (dst, saves, memMap, costMap) =
+            foldl (foldTemp toStack) ([], [], memMap, costMap) dst
+          val instr = Assem.OPER {assem=assem, dst=List.rev dst, src=List.rev src, jump=jump}
+        in (saves @ instr :: loads @ instrs, memMap, costMap)
         end
-      |   foldInstr (instr as Assem.MOVE {assem, dst, src}, (instrs, memMap)) =
+      |   foldInstr (Assem.MOVE {assem, dst, src}, (instrs, memMap, costMap)) =
         let
-          val (loads, memMap) = foldTemp fromStack (src, ([], memMap))
-          val (saves, memMap) = foldTemp toStack (dst, ([], memMap))
-        in (saves @ instr :: loads @ instrs, memMap)
+          val (src, loads, memMap, costMap) =
+            foldTemp fromStack (src, ([], [], memMap, costMap))
+          val (dst, saves, memMap, costMap) =
+            foldTemp toStack (dst, ([], [], memMap, costMap))
+          val instr = Assem.MOVE {assem=assem, dst=List.hd dst, src=List.hd src}
+        in (saves @ instr :: loads @ instrs, memMap, costMap)
         end
-      |   foldInstr (instr, (instrs, memMap)) = (instr::instrs, memMap)
-      val (instrs', memMap) = foldl foldInstr ([], Temp.Map.empty) instrs
-    in List.rev instrs'
+      |   foldInstr (instr, (instrs, memMap, costMap)) = (instr::instrs, memMap, costMap)
+      val (instrs', memMap, costMap) = foldl foldInstr ([], Temp.Map.empty, costMap) instrs
+    in (List.rev instrs', costMap)
     end
 
   fun alloc' (instrs, frame, costMap) =
@@ -78,12 +94,7 @@ struct
         in (List.filter filterInstr instrs, allocation)
         end
       else
-        let
-          val costMap =
-            Temp.Set.foldl
-            (fn (t, m) => Temp.Map.insert (m, t, Real.posInf))
-            costMap spillSet
-          val instrs' = rewrite (instrs, frame, spillSet)
+        let val (instrs', costMap) = rewrite (instrs, frame, spillSet, costMap)
         in alloc' (instrs', frame, costMap)
         end
     end

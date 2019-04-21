@@ -328,10 +328,7 @@ struct
         in
           case Temp.Map.find (colorMap, u) of
             SOME color => (Temp.Map.insert (colorMap, v, color), spills)
-          | NONE =>
-            if Temp.Set.member (spills, u)
-            then (colorMap, Temp.Set.add (spills, v))
-            else ErrorMsg.impossible (Temp.makestring u ^ " is neither colored nor spilled")
+          | NONE => (colorMap, spills)
         end
       and unfreeze (igraph, activeMoves, pendingMoves, simplifySet, frozenSet, spillSet) =
         case getItem frozenSet of

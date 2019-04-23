@@ -318,7 +318,7 @@ struct
             )
             (* NAME *)
             |   munchExp (T.NAME label) =
-                result ("ori `d0, $zero, " ^ Symbol.name label ^ "\n", [])
+                result ("la `d0, " ^ Symbol.name label ^ "\n", [])
             (* CONST *)
             |   munchExp (T.CONST 0) = Frame.ZERO
             |   munchExp (T.CONST c) =

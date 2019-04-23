@@ -90,7 +90,7 @@ struct
                     iter + 1
                 )
             fun char2byte c = Int.toString (Char.ord c)
-            val data = String.concatWith "," (
+            val data = String.concatWith ", " (
                 word2bytes (Word.fromInt (String.size s), [], 0)
                 @ map char2byte (String.explode s)
             )

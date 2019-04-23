@@ -1,3 +1,1 @@
-# Register Allocation
-## Spilling
-We implement register spilling so that functions with a lot of local variables can be compiled. We provide a simple test case in `spill.tig`, which has 33 local variables and definitely cannot be compiled into MIPS without register spilling. Our compiler compiles `spill.tig` successfully but we note that there is still room for improvement. We adopted the simple rewriting strategy that stores a spilled temporary after each of its definition and loads it before each of its use. This strategy adds unnecessary load and store instructions when the register assigned to the spilled temporary is not used by other temporaries between two access to the spilled temporary.
+# Putting it all together

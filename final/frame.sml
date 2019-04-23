@@ -80,25 +80,10 @@ struct
     fun allocArgs ({name, formals, nLocal, nArg}, n) = nArg := Int.max (!nArg, n)
 
     fun string (label, s) =
-        let val mask = Word.fromInt 0xff
-            fun word2bytes (i, ans, iter) =
-                if iter = 4
-                then ans
-                else word2bytes (
-                    Word.>> (i, Word.fromInt 8),
-                    Word.fmt StringCvt.DEC (Word.andb (i, mask)) :: ans,
-                    iter + 1
-                )
-            fun char2byte c = Int.toString (Char.ord c)
-            val data = String.concatWith ", " (
-                word2bytes (Word.fromInt (String.size s), [], 0)
-                @ map char2byte (String.explode s)
-            )
-        in
-            ".data\n" ^ align
-            ^ "# " ^ String.toString s ^ "\n"
-            ^ Symbol.name label ^ ": .byte " ^ data ^ "\n\n"
-        end
+        ".data\n" ^ align
+        ^ Symbol.name label ^ ":\n"
+        ^ ".word " ^ Int.toString (String.size s) ^ "\n"
+        ^ ".ascii \"" ^ String.toString s ^ "\"\n\n"
 
     fun exp (InReg r) frameAddr = T.TEMP r
     |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)

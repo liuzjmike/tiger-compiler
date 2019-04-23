@@ -121,16 +121,20 @@ struct
                     src=[munchExp e], dst=[], jump=SOME [t, f]
                 })
             (* EXP *)
-            |   munchStm (T.EXP (T.CALL (T.NAME label, args))) =
+            |   munchStm (T.EXP (T.CALL (T.NAME label, args))) = (
                 emit (A.OPER {
                     assem="jal " ^ Symbol.name label ^ "\n",
                     src=munchArgs args, dst=Frame.calldefs, jump=NONE
-                })
-            |   munchStm (T.EXP (T.CALL (e, args))) =
+                });
+                Frame.allocArgs (frame, List.length args)
+            )
+            |   munchStm (T.EXP (T.CALL (e, args))) = (
                 emit (A.OPER {
                     assem="jal `s0\n",
                     src=(munchExp e)::munchArgs args, dst=Frame.calldefs, jump=NONE
-                })
+                });
+                Frame.allocArgs (frame, List.length args)
+            )
             |   munchStm (T.EXP e) = (munchExp e; ())
             (* LABEL *)
             |   munchStm (T.LABEL label) =

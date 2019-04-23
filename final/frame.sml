@@ -1,4 +1,4 @@
-structure MipsFrame : FRAME =
+structure MipsFrame :> FRAME =
 struct
     structure T = Tree
 
@@ -60,7 +60,7 @@ struct
 
     datatype access = InFrame of int
                     | InReg of Temp.temp
-    type frame = {name: Temp.label, formals: access list, nLocal: int ref}
+    type frame = {name: Temp.label, formals: access list, nLocal: int ref, nArg: int ref}
 
     fun newLocal true count = (count := !count + 1; InFrame (~wordSize * !count))
     |   newLocal false count = InReg (Temp.newtemp ())
@@ -68,14 +68,16 @@ struct
     fun newFrame {name, formals} =
         let val nLocal = ref 0
             fun f escape = newLocal escape nLocal
-        in {name=name, formals=map f formals, nLocal=nLocal}
+        in {name=name, formals=map f formals, nLocal=nLocal, nArg=ref 0}
         end
 
-    fun name {name, formals, nLocal} = Symbol.name name
+    fun name {name, formals, nLocal, nArg} = Symbol.name name
 
-    fun formals {name, formals, nLocal} = formals
+    fun formals {name, formals, nLocal, nArg} = formals
 
-    fun allocLocal {name, formals, nLocal} escape = newLocal escape nLocal
+    fun allocLocal {name, formals, nLocal, nArg} escape = newLocal escape nLocal
+
+    fun allocArgs ({name, formals, nLocal, nArg}, n) = nArg := Int.max (!nArg, n)
 
     fun string (label, s) =
         let val mask = Word.fromInt 0xff
@@ -94,7 +96,7 @@ struct
             )
         in
             ".data\n" ^ align
-            ^ "#" ^ s ^ "\n"
+            ^ "# " ^ String.toString s ^ "\n"
             ^ Symbol.name label ^ ": .byte " ^ data ^ "\n\n"
         end
 
@@ -111,7 +113,7 @@ struct
     val (entryMoves, exitMoves) = foldl foldCallerSave ([], []) (("$ra", RA)::calleesaves)
     val entryMoves = T.seq (List.rev entryMoves)
     val exitMoves = T.seq (List.rev exitMoves)
-    fun procEntryExit1 ({name, formals, nLocal}, body) =
+    fun procEntryExit1 ({name, formals, nLocal, nArg}, body) =
         (* TODO: don't save static link unless necessary *)
         let fun moveActuals (_, [], n) = []
             |   moveActuals ([], a::formals, n) =
@@ -134,17 +136,27 @@ struct
     fun procEntryExit2 (frame, body) =
         body @
         [Assem.OPER {
-            assem="jr $ra\n", dst=[], jump=SOME [],
+            assem="", dst=[], jump=SOME [],
             src=map #2 (specialregs @ calleesaves)
         }]
-    fun procEntryExit3 ({name, formals, nLocal}, body) = 
+    fun procEntryExit3 ({name, formals, nLocal, nArg}, body) = 
     let val name = Symbol.name name
+        val fpOffset = (!nLocal + 1) * wordSize
+        val fpOffset' = Int.toString fpOffset
+        val frameSize = fpOffset + Int.max (!nArg - 4, 0) * 4
+        val frameSize' = Int.toString frameSize
     in {
         prolog=
             ".text\n" ^ name ^ ":\n"
-            ^ "or $fp, $sp, $zero\n",
+            ^ "sw $fp, -" ^ fpOffset' ^ "($sp)\n"
+            ^ "or $fp, $sp, $zero\n"
+            ^ "addi $sp, $sp, -" ^ frameSize' ^ "\n",
         body=body,
-        epilog=".end " ^ name ^ "\n\n"
+        epilog=
+            "or $sp, $fp, $zero\n"
+            ^ "lw $fp, -" ^ fpOffset' ^ "($fp)\n"
+            ^ "jr $ra\n"
+            ^ ".end " ^ name ^ "\n\n"
     }
     end
 

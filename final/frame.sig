@@ -19,6 +19,7 @@ signature FRAME = sig
     val name: frame -> string
     val formals: frame -> access list
     val allocLocal: frame -> bool -> access
+    val allocArgs: frame * int -> unit
     val string: Tree.label * string -> string
 
     val exp: access -> Tree.exp -> Tree.exp

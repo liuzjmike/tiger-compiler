@@ -19,8 +19,8 @@ struct
           List.concat (map (MipsGen.codegen frame) stms')
         )
         val (instrs, allocation) = R.alloc (instrs, frame)
-        val {prolog, body, epilog} = MipsFrame.procEntryExit3 (frame, instrs)
         val format0 = Assem.format (R.getRegister allocation)
+        val {prolog, body, epilog} = MipsFrame.procEntryExit3 (frame, instrs)
       in
         TextIO.output(out, prolog);
         app (fn i => TextIO.output(out, format0 i)) body;

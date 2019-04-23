@@ -233,7 +233,7 @@ struct
                 T.MOVE (i, T.BINOP (T.PLUS, i, T.CONST 1)),
                 T.LABEL bodyLabel,
                 b,
-                T.CJUMP (T.RELOP (T.LT, i, hiReg), bodyLabel, afterLabel),
+                T.CJUMP (T.RELOP (T.LT, i, hiReg), beforeLabel, afterLabel),
                 T.LABEL afterLabel])
         end
 

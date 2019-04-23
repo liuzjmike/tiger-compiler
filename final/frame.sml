@@ -147,7 +147,9 @@ struct
         val frameSize' = Int.toString frameSize
     in {
         prolog=
-            ".text\n" ^ name ^ ":\n"
+            ".text\n"
+            ^ (if name = "tig_main" then ".globl tig_main\n" else "")
+            ^ name ^ ":\n"
             ^ "sw $fp, -" ^ fpOffset' ^ "($sp)\n"
             ^ "or $fp, $sp, $zero\n"
             ^ "addi $sp, $sp, -" ^ frameSize' ^ "\n",

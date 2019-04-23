@@ -14,8 +14,8 @@ struct
     val nilPointer = Temp.newlabel ()
     val indexOutOfBound = Temp.newlabel ()
     val defaultFragList = [
-        F.STRING (nilPointer, "nil pointer"),
-        F.STRING (indexOutOfBound, "array index out of bound")
+        F.STRING (nilPointer, "nil pointer\n"),
+        F.STRING (indexOutOfBound, "array index out of bound\n")
     ]
     val fragList: F.frag list ref = ref defaultFragList
 

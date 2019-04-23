@@ -322,7 +322,7 @@ struct
             (* CONST *)
             |   munchExp (T.CONST 0) = Frame.ZERO
             |   munchExp (T.CONST c) =
-                result ("li `d0, $zero, " ^ intToString c ^ "\n", [])
+                result ("li `d0, " ^ intToString c ^ "\n", [])
             (* TEMP *)
             |   munchExp (T.TEMP t) = t
 

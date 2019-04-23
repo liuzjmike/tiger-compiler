@@ -10,6 +10,14 @@ let
     var diag1 := intArray [N+N-1] of 0
     var diag2 := intArray [N+N-1] of 0
 
+    function printint(i: int) =
+        let function f(i:int) = if i>0 
+             then (f(i/10); print(chr(i-i/10*10+ord("0"))))
+        in if i<0 then (print("-"); f(-i))
+          else if i>0 then f(i)
+          else print("0")
+        end
+
     function printboard() =
        (for i := 0 to N-1
 	 do (for j := 0 to N-1 
@@ -18,7 +26,7 @@ let
          print("\n"))
 
     function try(c:int) = 
-( /*  for i:= 0 to c do print("."); print("\n"); flush();*/
+(   for i:= 0 to c do print("."); print("\n"); flush();
      if c=N
      then printboard()
      else for r := 0 to N-1
@@ -29,6 +37,8 @@ let
 			 row[r]:=0; diag1[r+c]:=0; diag2[r+7-c]:=0)
 
 )
- in try(0)
+ in 
+ printint (N+N-1);
+ try(0)
 end
 	

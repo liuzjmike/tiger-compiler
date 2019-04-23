@@ -439,7 +439,7 @@ struct
         end
 
     fun transProg exp =
-        let val level = Tr.newLevel {parent=Tr.outermost, name=Temp.namedlabel "tigermain", formals=[]}
+        let val level = Tr.newLevel {parent=Tr.outermost, name=Temp.namedlabel "tig_main", formals=[]}
             val {exp, ty} = transExp (E.base_venv, E.base_tenv, exp, NONE, level)
         in
             Tr.procEntryExit {level=level, body=exp};

@@ -19,11 +19,14 @@ struct
           List.concat (map (MipsGen.codegen frame) stms')
         )
         val (instrs, allocation) = R.alloc (instrs, frame)
+        val {prolog, body, epilog} = MipsFrame.procEntryExit3 (frame, instrs)
         val format0 = Assem.format (R.getRegister allocation)
       in
-        app (fn i => TextIO.output(out,format0 i)) instrs
+        TextIO.output(out, prolog);
+        app (fn i => TextIO.output(out, format0 i)) body;
+        TextIO.output(out, epilog)
       end
-    | emitproc out (F.STRING (lab,s)) = TextIO.output(out,F.string(lab,s))
+    | emitproc out (F.STRING (lab, s)) = TextIO.output(out, F.string(lab, s))
 
   fun withOpenFile fname f = 
       let val out = TextIO.openOut fname

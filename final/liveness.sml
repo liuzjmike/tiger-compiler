@@ -70,7 +70,6 @@ struct
                             )
                             end
                         else (liveOut, graph, moves)
-                    (* FIXME: add def to outList? *)
                     val outList = Temp.Set.listItems liveOut
                     fun foldDef (def, graph) =
                         let val graph = Graph.addNewNode (graph, def, ())

@@ -54,6 +54,7 @@ struct
     val registers = Temp.Map.listItems tempMap
 
     val wordSize = 4 (* 32 bit *)
+    val align = ".align " ^ Int.toString wordSize ^ "\n"
 
     fun externalCall (f, args) = T.CALL (T.NAME (Temp.namedlabel f), args)
 
@@ -76,7 +77,26 @@ struct
 
     fun allocLocal {name, formals, nLocal} escape = newLocal escape nLocal
 
-    fun string (label, s) = Symbol.name label ^ ": .asciiz \"" ^ String.toString s ^ "\"\n"
+    fun string (label, s) =
+        let val mask = Word.fromInt 0xff
+            fun word2bytes (i, ans, iter) =
+                if iter = 4
+                then ans
+                else word2bytes (
+                    Word.>> (i, Word.fromInt 8),
+                    Word.fmt StringCvt.DEC (Word.andb (i, mask)) :: ans,
+                    iter + 1
+                )
+            fun char2byte c = Int.toString (Char.ord c)
+            val data = String.concatWith "," (
+                word2bytes (Word.fromInt (String.size s), [], 0)
+                @ map char2byte (String.explode s)
+            )
+        in
+            ".data\n" ^ align
+            ^ "#" ^ s ^ "\n"
+            ^ Symbol.name label ^ ": .byte " ^ data ^ "\n\n"
+        end
 
     fun exp (InReg r) frameAddr = T.TEMP r
     |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)
@@ -91,7 +111,6 @@ struct
     val (entryMoves, exitMoves) = foldl foldCallerSave ([], []) (("$ra", RA)::calleesaves)
     val entryMoves = T.seq (List.rev entryMoves)
     val exitMoves = T.seq (List.rev exitMoves)
-    (* TODO: special treatment calls with more than 4 arguments *)
     fun procEntryExit1 ({name, formals, nLocal}, body) =
         (* TODO: don't save static link unless necessary *)
         let fun moveActuals (_, [], n) = []
@@ -105,7 +124,6 @@ struct
             |   moveActuals (r::argregs, a::formals, n) =
                 T.MOVE (exp a (T.TEMP FP), T.TEMP r) :: moveActuals (argregs, formals, n)
         in T.seq [
-            T.LABEL name,
             entryMoves,
             T.seq (moveActuals (argregs, formals, 0)),
             body,
@@ -119,11 +137,16 @@ struct
             assem="jr $ra\n", dst=[], jump=SOME [],
             src=map #2 (specialregs @ calleesaves)
         }]
-    fun procEntryExit3 ({name, formals, nLocal}, body) = {
-        prolog="PROCEDURE " ^ Symbol.name name ^ "\n",
+    fun procEntryExit3 ({name, formals, nLocal}, body) = 
+    let val name = Symbol.name name
+    in {
+        prolog=
+            ".text\n" ^ name ^ ":\n"
+            ^ "or $fp, $sp, $zero\n",
         body=body,
-        epilog="END " ^ Symbol.name name ^ "\n"
+        epilog=".end " ^ name ^ "\n\n"
     }
+    end
 
     datatype frag = PROC of {body: Tree.stm, frame: frame}
                   | STRING of Temp.label * string

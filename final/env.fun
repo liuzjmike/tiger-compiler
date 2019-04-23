@@ -24,61 +24,61 @@ struct
         foldl addToTable S.empty [
             ("print", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "print",
+                label=Temp.namedlabel "tig_print",
                 formals=[T.STRING],
                 result=T.UNIT
             }),
             ("flush", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "flush",
+                label=Temp.namedlabel "tig_flush",
                 formals=[],
                 result=T.UNIT
             }),
             ("getchar", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "getchar",
+                label=Temp.namedlabel "tig_getchar",
                 formals=[],
                 result=T.STRING
             }),
             ("ord", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "ord",
+                label=Temp.namedlabel "tig_ord",
                 formals=[T.STRING],
                 result=T.INT
             }),
             ("chr", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "chr",
+                label=Temp.namedlabel "tig_chr",
                 formals=[T.INT],
                 result=T.STRING
             }),
             ("size", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "size",
+                label=Temp.namedlabel "tig_size",
                 formals=[T.STRING],
                 result=T.INT
             }),
             ("substring", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "substring",
+                label=Temp.namedlabel "tig_substring",
                 formals=[T.STRING, T.INT, T.INT],
                 result=T.STRING
             }),
             ("concat", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "concat",
+                label=Temp.namedlabel "tig_concat",
                 formals=[T.STRING, T.STRING],
                 result=T.STRING
             }),
             ("not", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "not",
+                label=Temp.namedlabel "tig_not",
                 formals=[T.INT],
                 result=T.INT
             }),
             ("exit", FunEntry {
                 level=Translate.outermost,
-                label=Temp.namedlabel "exit",
+                label=Temp.namedlabel "tig_exit",
                 formals=[T.INT],
                 result=T.UNIT
             })

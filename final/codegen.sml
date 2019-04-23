@@ -323,14 +323,16 @@ struct
             |   munchExp (T.TEMP t) = t
 
             and munchArgs (args) =
-                let fun f (i, [], argregs) = List.take (
+                let val nArgreg = List.length Frame.argregs
+                    fun f (i, [], argregs) = List.take (
                         Frame.argregs,
-                        Int.min(i, List.length Frame.argregs)
+                        Int.min(i, nArgreg)
                     )
                     |   f (i, a::l, []) = (
-                        (* TODO: move arguments into the frame *)
-                        (* munchStm (T.MOVE (T.MEM (), a)); *)
-                        munchExp a;
+                        munchStm (T.MOVE (T.mem (
+                            T.TEMP Frame.SP,
+                            T.CONST ((i - nArgreg) * Frame.wordSize)
+                        ), a));
                         f (i+1, l, [])
                     )
                     |   f (i, a::l, r::rs) = (

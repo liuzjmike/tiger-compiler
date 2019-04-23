@@ -1,11 +1,8 @@
 /* a record type and a record variable */
 let
-	type rectype = {name:string, age:int}
-	var rec1:rectype := rectype {name="Nobody", age=1000}
-    function printName(rec: rectype) = print(concat(rec.name, "\n"))
+    type  rectype = {name:string, age:int}
+    var rec1:rectype := rectype {name="Nobody", age=1000}
 in
-    printName(rec1);
-	rec1.name := "Somebody";
-    printName(rec1);
-	rec1
+    rec1.name := "Somebody";
+    rec1
 end

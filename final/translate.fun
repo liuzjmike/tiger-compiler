@@ -108,13 +108,13 @@ struct
 
     fun eqExp (left, right, string) = Ex (
         if string
-        then F.externalCall ("stringEqual", [unEx left, unEx right])
+        then F.externalCall ("tig_stringEqual", [unEx left, unEx right])
         else T.RELOP (T.EQ, unEx left, unEx right)
     )
 
     fun neExp (left, right, string) = Ex (
         if string
-        then T.BINOP (T.MINUS, T.CONST 1, F.externalCall ("stringEqual", [unEx left, unEx right]))
+        then T.BINOP (T.MINUS, T.CONST 1, F.externalCall ("tig_stringEqual", [unEx left, unEx right]))
         else T.RELOP (T.NE, unEx left, unEx right)
     )
 
@@ -145,7 +145,7 @@ struct
 
     fun recordExp fields =
         let val a = T.TEMP (Temp.newtemp ())
-            val extCall = F.externalCall ("allocRecord", [T.CONST ((List.length fields) * F.wordSize)])
+            val extCall = F.externalCall ("tig_allocRecord", [T.CONST ((List.length fields) * F.wordSize)])
             fun f ([], k) = []
             |   f (field::l, k) =
                 let val moveVal = T.MOVE (T.mem (a, T.CONST k), unEx field)
@@ -242,7 +242,7 @@ struct
     fun letExp ([], body) = body
     |   letExp (varDecs, body) = Ex (T.ESEQ (T.seq (map unNx varDecs), unEx body))
 
-    fun arrayExp (size, init) = Ex (F.externalCall ("initArray", [unEx size, unEx init]))
+    fun arrayExp (size, init) = Ex (F.externalCall ("tig_initArray", [unEx size, unEx init]))
 
     fun simpleVar ((defLevel, access), curLevel) =
         let val defId = case defLevel
@@ -255,6 +255,13 @@ struct
         in Ex (g (unLevel curLevel, T.TEMP F.FP))
         end
 
+    fun error strLabel =
+        Nx (T.seq [
+            T.EXP (F.externalCall ("tig_print", [T.NAME strLabel])),
+            T.EXP (F.externalCall ("tig_flush", [])),
+            T.EXP (F.externalCall ("tig_exit", [T.CONST 1]))
+        ])
+
     fun fieldVar (a, i) = 
         let val addr = unEx a
         in
@@ -262,11 +269,7 @@ struct
                 unNx (ifThenExp (
                     Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
                     (* NOTE: can implement runtime function `nilPointer` in runtime.c instead *)
-                    Nx (T.seq [
-                        T.EXP (F.externalCall ("print", [T.NAME nilPointer])),
-                        T.EXP (F.externalCall ("flush", [])),
-                        T.EXP (F.externalCall ("exit", [T.CONST 1]))
-                    ])
+                    error nilPointer
                 )),
                 T.mem (addr, T.CONST (i * F.wordSize))
             ))
@@ -274,8 +277,13 @@ struct
 
     fun subscriptVar (a, i) = 
         let val addr = unEx a
-            val bound = T.mem (addr, T.CONST (~F.wordSize))
+            val bound = T.MEM addr
             val idx = unEx i
+            val offset = T.BINOP (
+                T.MUL,
+                T.BINOP (T.PLUS, idx, T.CONST 1),
+                T.CONST F.wordSize
+            )
         in
             Ex (T.ESEQ (
                 unNx (ifThenExp (
@@ -285,13 +293,9 @@ struct
                         T.RELOP (T.GE, idx, bound)
                     )),
                     (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
-                    Nx (T.seq [
-                        T.EXP (F.externalCall ("print", [T.NAME indexOutOfBound])),
-                        T.EXP (F.externalCall ("flush", [])),
-                        T.EXP (F.externalCall ("exit", [T.CONST 1]))
-                    ])
+                    error indexOutOfBound
                 )),
-                T.mem (addr, T.BINOP (T.MUL, idx, T.CONST 4))
+                T.mem (addr, offset)
             ))
         end
 

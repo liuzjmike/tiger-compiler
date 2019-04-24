@@ -263,20 +263,21 @@ struct
         ])
 
     fun fieldVar (a, i) = 
-        let val addr = unEx a
+        let val addr = T.TEMP (Temp.newtemp ())
         in
-            Ex (T.ESEQ (
+            Ex (T.ESEQ ( T.SEQ (
+                T.MOVE (addr, unEx a),
                 unNx (ifThenExp (
                     Ex (T.RELOP (T.EQ, addr, T.CONST 0)),
                     (* NOTE: can implement runtime function `nilPointer` in runtime.c instead *)
                     error nilPointer
-                )),
+                ))),
                 T.mem (addr, T.CONST (i * F.wordSize))
             ))
         end
 
     fun subscriptVar (a, i) = 
-        let val addr = unEx a
+        let val addr = T.TEMP (Temp.newtemp ())
             val bound = T.MEM addr
             val idx = unEx i
             val offset = T.BINOP (
@@ -285,7 +286,8 @@ struct
                 T.CONST F.wordSize
             )
         in
-            Ex (T.ESEQ (
+            Ex (T.ESEQ (T.SEQ (
+                T.MOVE (addr, unEx a),
                 unNx (ifThenExp (
                     Ex (T.BINOP (
                         T.OR,
@@ -294,7 +296,7 @@ struct
                     )),
                     (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
                     error indexOutOfBound
-                )),
+                ))),
                 T.mem (addr, offset)
             ))
         end

@@ -88,14 +88,14 @@ struct
     fun exp (InReg r) frameAddr = T.TEMP r
     |   exp (InFrame k) frameAddr = T.mem (frameAddr, T.CONST k)
 
-    fun foldCallerSave ((r, t), (entryMoves, exitMoves)) =
+    fun foldCalleeSave ((r, t), (entryMoves, exitMoves)) =
         let val temp = Temp.newtemp ()
         in (
             T.MOVE (T.TEMP temp, T.TEMP t) :: entryMoves,
             T.MOVE (T.TEMP t, T.TEMP temp) :: exitMoves
         )
         end
-    val (entryMoves, exitMoves) = foldl foldCallerSave ([], []) (("$ra", RA)::calleesaves)
+    val (entryMoves, exitMoves) = foldl foldCalleeSave ([], []) (("$ra", RA)::calleesaves)
     val entryMoves = T.seq (List.rev entryMoves)
     val exitMoves = T.seq (List.rev exitMoves)
     fun procEntryExit1 ({name, formals, nLocal, nArg}, body) =

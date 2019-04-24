@@ -24,7 +24,7 @@ struct
         else ()
     fun checkShiftAmount a =
         if a < 0 orelse a > 31
-        then error ("invalid shift amount " ^ Int.toString a)
+        then error ("illegal shift amount " ^ Int.toString a)
         else ()
 
     val zero = T.TEMP Frame.ZERO

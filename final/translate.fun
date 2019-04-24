@@ -279,15 +279,16 @@ struct
     fun subscriptVar (a, i) = 
         let val addr = T.TEMP (Temp.newtemp ())
             val bound = T.MEM addr
-            val idx = unEx i
+            val idx = T.TEMP (Temp.newtemp ())
             val offset = T.BINOP (
                 T.MUL,
                 T.BINOP (T.PLUS, idx, T.CONST 1),
                 T.CONST F.wordSize
             )
         in
-            Ex (T.ESEQ (T.SEQ (
+            Ex (T.ESEQ (T.seq [
                 T.MOVE (addr, unEx a),
+                T.MOVE (addr, unEx i),
                 unNx (ifThenExp (
                     Ex (T.BINOP (
                         T.OR,
@@ -296,7 +297,7 @@ struct
                     )),
                     (* NOTE: can implement runtime function `indexOutOfBound` in runtime.c instead *)
                     error indexOutOfBound
-                ))),
+                ))],
                 T.mem (addr, offset)
             ))
         end

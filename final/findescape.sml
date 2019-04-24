@@ -18,16 +18,16 @@ struct
         end
 
     and traverseExp(env, d, exp) = 
-        let fun trexp (A.VarExp var) = traverseVar(env, d, var)
-            |   trexp (A.CallExp {func, args, pos}) = (app trexp args; ())
-            |   trexp (A.OpExp {left, oper=_, right, pos}) = (trexp left; trexp right; ())
+        let fun trexp (A.VarExp var) = traverseVar (env, d, var)
+            |   trexp (A.CallExp {func, args, pos}) = app trexp args
+            |   trexp (A.OpExp {left, oper=_, right, pos}) = (trexp left; trexp right)
             |   trexp (A.RecordExp {fields, typ, pos}) =
                 let fun f (id, exp, pos) = trexp exp
-                in app f fields; ()
+                in app f fields
                 end
             |   trexp (A.SeqExp expList) =
                 let fun f (exp, pos) = trexp exp
-                in app f expList; ()
+                in app f expList
                 end
             |   trexp (A.AssignExp {var, exp, pos}) = (traverseVar (env, d, var); trexp exp)
             |   trexp (A.IfExp {test, then', else', pos}) = (
@@ -44,29 +44,29 @@ struct
                     traverseExp (S.enter (env, var, (d, escape)), d, body)
                 )
             |   trexp (A.LetExp {decs, body, pos}) = traverseExp (traverseDecs (env, d, decs), d, body)
-            |   trexp (A.ArrayExp {typ, size, init, pos}) = trexp init
+            |   trexp (A.ArrayExp {typ, size, init, pos}) = (trexp size; trexp init)
             |   trexp _ = ()
         in trexp exp
         end
 
     and traverseDecs(env, d, decs) =
         let fun trdec (A.FunctionDec decList, env) =
-            let val d = d + 1
-                fun trfundec {name, params, result, body, pos} =
-                    let fun enterparam ({name, escape, typ, pos}, env) = S.enter (env, name, (d, escape))
-                    in traverseExp (foldl enterparam env params, d, body)
-                    end
-            in
-                app trfundec decList;
-                env
-            end
-            |   trdec (A.VarDec {name, escape, typ=NONE, init, pos}, env) = (
+                let val d = d + 1
+                    fun trfundec {name, params, result, body, pos} =
+                        let fun enterparam ({name, escape, typ, pos}, env) = S.enter (env, name, (d, escape))
+                        in traverseExp (foldl enterparam env params, d, body)
+                        end
+                in
+                    app trfundec decList;
+                    env
+                end
+            |   trdec (A.VarDec {name, escape, typ, init, pos}, env) = (
                 traverseExp (env, d, init);
                 S.enter (env, name, (d, escape))
             )
-            |   trdec _ = env
+            |   trdec (_, env) = env
         in 
             foldl trdec env decs
         end
-    fun findEscape(prog) = traverseExp (S.empty, 0, prog)
+    fun findEscape prog = traverseExp (S.empty, 0, prog)
 end

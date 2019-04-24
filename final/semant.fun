@@ -434,8 +434,8 @@ struct
                     }
                 end
             fun buildEnv (dec, {venv, tenv, varDecs}) = transDec (venv, tenv, dec, varDecs)
-            fun revvarDecs {venv, tenv, varDecs} = {venv=venv, tenv=tenv, varDecs=List.rev varDecs}
-        in revvarDecs (foldl buildEnv {venv=venv, tenv=tenv, varDecs=[]} decs)
+            fun revVarDecs {venv, tenv, varDecs} = {venv=venv, tenv=tenv, varDecs=List.rev varDecs}
+        in revVarDecs (foldl buildEnv {venv=venv, tenv=tenv, varDecs=[]} decs)
         end
 
     fun transProg exp =

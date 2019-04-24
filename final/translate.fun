@@ -70,7 +70,7 @@ struct
             result
         end
 
-    fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame))  frameAddr
+    fun staticLink frame frameAddr = F.exp (List.hd (F.formals frame)) frameAddr
 
     fun nilExp () = Ex (T.CONST 0)
 

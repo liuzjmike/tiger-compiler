@@ -288,7 +288,7 @@ struct
         in
             Ex (T.ESEQ (T.seq [
                 T.MOVE (addr, unEx a),
-                T.MOVE (addr, unEx i),
+                T.MOVE (idx, unEx i),
                 unNx (ifThenExp (
                     Ex (T.BINOP (
                         T.OR,

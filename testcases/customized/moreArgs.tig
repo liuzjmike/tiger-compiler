@@ -1,0 +1,15 @@
+let
+	function printint(i: int) =
+	  let function f(i:int) = if i>0 
+		     then (f(i/10); print(chr(i-i/10*10+ord("0"))))
+	   in if i<0 then (print("-"); f(-i))
+	      else if i>0 then f(i)
+	      else print("0")
+	  end
+
+
+	function printMoreArgs(a:string,b:string,c:string,d:string,e:string,f:string, g:int) = 
+		(print(a);print(b);print(c);print(d);print(e);print(f);printint(g))
+in
+	printMoreArgs("a,", "b,", "c,", "d,", "e,", "f,", 7)
+end

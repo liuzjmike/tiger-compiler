@@ -1,4 +1,4 @@
-let 
+let
   function printint(i: int) =
     let
       function f(i:int) =
@@ -15,11 +15,8 @@ let
       else print("0")
     end
 
-  function fact(n: int):int = 
-    if n = 0
-    then 1
-    else n * fact(n - 1)
-in
-  for i := 0 to 10
-    do(printint(fact(i));print("\n"))
+  function printMoreArgs(a:string,b:string,c:string,d:string,e:string,f:string, g:int) = 
+    (print(a); print(b); print(c); print(d); print(e); print(f); printint(g); print("\n"))
+
+in printMoreArgs("a,", "b,", "c,", "d,", "e,", "f,", 7)
 end

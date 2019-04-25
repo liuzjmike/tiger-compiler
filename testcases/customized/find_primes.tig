@@ -1,0 +1,47 @@
+let
+  function printint(i: int) =
+    let
+      function f(i:int) =
+        if i > 0 
+        then (
+          f(i/10);
+          print(chr(i-i/10*10+ord("0")))
+        )
+    in
+      if i < 0
+      then (print("-"); f(-i))
+      else if i > 0
+      then f(i)
+      else print("0")
+    end
+
+  function calcRemainder(n: int, m: int):int = 
+    let 
+      var k := n / m
+    in
+      n - m * k
+    end
+
+
+  function isPrime(n: int):int = 
+  let
+    var is_prime := 1
+  in
+    if n <> 2
+    then
+      for i := 2 to n - 1
+      do(
+        if
+          calcRemainder(n, i) = 0
+        then
+          (is_prime := 0; break)
+      );
+    is_prime
+  end
+
+in
+  for i := 2 to 100 do (
+    if isPrime(i)
+    then (printint(i); print("\n"))
+  )
+end
